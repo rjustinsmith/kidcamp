@@ -1,0 +1,150 @@
+:root {
+  --green: #2f855a;
+  --green-dark: #22543d;
+  --sand: #fefbf3;
+  --sky: #ebf8ff;
+  --text: #2d3748;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--sand);
+  color: var(--text);
+}
+
+.site-header {
+  background: var(--green);
+  color: white;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.site-header h1 {
+  margin: 0 0 0.5rem;
+}
+
+.session-list {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  padding: 2rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.session-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.session-card h2 {
+  margin-top: 0;
+  color: var(--green-dark);
+}
+
+.dates {
+  font-weight: 600;
+}
+
+.spots {
+  font-size: 0.9rem;
+  color: #718096;
+}
+
+.button {
+  display: inline-block;
+  margin-top: 1rem;
+  background: var(--green);
+  color: white;
+  text-decoration: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--green-dark);
+}
+
+.button-disabled {
+  background: #a0aec0;
+  cursor: not-allowed;
+}
+
+.form-wrap {
+  max-width: 560px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+label {
+  font-weight: 600;
+  margin-top: 0.75rem;
+}
+
+input,
+textarea {
+  padding: 0.6rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.error-box {
+  background: #fff5f5;
+  border: 1px solid #feb2b2;
+  color: #c53030;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.error-box ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 1.5rem;
+  color: var(--green-dark);
+  text-decoration: none;
+}
+
+.summary-list {
+  background: var(--sky);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+}
+
+.session-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--green-dark);
+}

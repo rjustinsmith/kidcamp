@@ -1,0 +1,15 @@
+{
+  "name": "kidcamp",
+  "version": "1.0.0",
+  "description": "Registration app for kids' summer camp",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.19.2"
+  }
+}

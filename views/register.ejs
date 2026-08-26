@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register - <%= session.name %></title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>Register for <%= session.name %></h1>
+    <p><%= session.dates %> &middot; <%= session.activities %></p>
+  </header>
+
+  <main class="form-wrap">
+    <% if (errors.length > 0) { %>
+      <div class="error-box">
+        <ul>
+          <% errors.forEach(function(err) { %>
+            <li><%= err %></li>
+          <% }); %>
+        </ul>
+      </div>
+    <% } %>
+
+    <form method="POST" action="/register/<%= session.id %>">
+      <label for="camperName">Camper's full name</label>
+      <input type="text" id="camperName" name="camperName" value="<%= values.camperName || '' %>" required />
+
+      <label for="camperAge">Camper's age</label>
+      <input type="number" id="camperAge" name="camperAge" min="5" max="17" value="<%= values.camperAge || '' %>" required />
+
+      <label for="parentName">Parent/guardian name</label>
+      <input type="text" id="parentName" name="parentName" value="<%= values.parentName || '' %>" required />
+
+      <label for="parentEmail">Parent/guardian email</label>
+      <input type="email" id="parentEmail" name="parentEmail" value="<%= values.parentEmail || '' %>" required />
+
+      <label for="emergencyContact">Emergency contact phone number</label>
+      <input type="tel" id="emergencyContact" name="emergencyContact" value="<%= values.emergencyContact || '' %>" required />
+
+      <label for="allergies">Allergies or things we should know (optional)</label>
+      <textarea id="allergies" name="allergies"><%= values.allergies || '' %></textarea>
+
+      <button type="submit" class="button">Submit Registration</button>
+    </form>
+
+    <a class="back-link" href="/">&larr; Back to all sessions</a>
+  </main>
+</body>
+</html>

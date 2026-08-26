@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registration Confirmed</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>You're all set! ✅</h1>
+  </header>
+
+  <main class="form-wrap">
+    <p><strong><%= registration.camperName %></strong> is registered for:</p>
+    <p class="session-name"><%= session.name %></p>
+    <p><%= session.dates %> &middot; <%= session.activities %></p>
+
+    <h3>What we have on file</h3>
+    <ul class="summary-list">
+      <li>Camper age: <%= registration.camperAge %></li>
+      <li>Parent/guardian: <%= registration.parentName %></li>
+      <li>Email: <%= registration.parentEmail %></li>
+      <li>Emergency contact: <%= registration.emergencyContact %></li>
+      <% if (registration.allergies) { %>
+        <li>Allergies/notes: <%= registration.allergies %></li>
+      <% } %>
+    </ul>
+
+    <a class="back-link" href="/">&larr; Back to all sessions</a>
+  </main>
+</body>
+</html>

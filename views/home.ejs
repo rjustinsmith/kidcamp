@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kid Camp Registration</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>🏕️ Kid Camp Sign-Up</h1>
+    <p>Pick a session below to register your camper.</p>
+  </header>
+
+  <main class="session-list">
+    <% sessions.forEach(function(session) { %>
+      <% const spotsLeft = session.capacity - session.spotsTaken; %>
+      <section class="session-card">
+        <h2><%= session.name %></h2>
+        <p class="dates"><%= session.dates %></p>
+        <p class="activities"><%= session.activities %></p>
+        <p class="spots">
+          <% if (spotsLeft > 0) { %>
+            <%= spotsLeft %> spot<%= spotsLeft === 1 ? '' : 's' %> left
+          <% } else { %>
+            Session full
+          <% } %>
+        </p>
+        <% if (spotsLeft > 0) { %>
+          <a class="button" href="/register/<%= session.id %>">Register</a>
+        <% } else { %>
+          <span class="button button-disabled">Full</span>
+        <% } %>
+      </section>
+    <% }); %>
+  </main>
+</body>
+</html>
