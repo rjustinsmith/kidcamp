@@ -1,4 +1,4 @@
-<title>Quiz Snake</title>
+<title>Snekker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
@@ -228,7 +228,7 @@
   <section id="pickScreen" class="screen">
     <div class="logo-row">
       <div class="logo-cube"></div>
-      <h1 class="logo-title">Quiz <span>Snake</span></h1>
+      <h1 class="logo-title">Snek<span>ker</span></h1>
     </div>
     <p class="tagline">Eat cubes. Grow your snake. Answer trivia to keep going!</p>
 
@@ -653,7 +653,7 @@ const COLS=24, ROWS=18;
 const DIFFICULTY = {
   easy:{tick:170,label:"Easy"},
   medium:{tick:130,label:"Medium"},
-  hard:{tick:115,label:"Hard"}
+  hard:{tick:122,label:"Hard"}
 };
 const QUIZ_WEDGES = [
   {type:"cat",cat:"science",color:"#4C6FFF"},
@@ -765,14 +765,14 @@ function refreshStartBtn(){
 }
 function loadBest(){
   try{
-    const v=localStorage.getItem("quizSnakeBest");
+    const v=localStorage.getItem("snekkerBest");
     if(v) bestLine.textContent="Best score so far: "+v;
   }catch(e){}
 }
 function saveBest(score){
   try{
-    const v=parseInt(localStorage.getItem("quizSnakeBest")||"0",10);
-    if(score>v) localStorage.setItem("quizSnakeBest",String(score));
+    const v=parseInt(localStorage.getItem("snekkerBest")||"0",10);
+    if(score>v) localStorage.setItem("snekkerBest",String(score));
   }catch(e){}
 }
 loadBest();
