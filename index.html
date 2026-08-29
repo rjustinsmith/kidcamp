@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Crab Climb</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="hud">
+    <div id="score">Height: 0m</div>
+    <div id="best">Best: 0m</div>
+  </div>
+
+  <div id="start-screen" class="overlay">
+    <h1>🦀 Crab Climb</h1>
+    <p>Scuttle up the mountain. Dodge the boulders, leap the crevices.</p>
+    <div class="controls-hint">
+      <div><b>&larr; / A</b> &nbsp; <b>&rarr; / D</b> &nbsp; switch lane</div>
+      <div><b>&uarr; / W / Space</b> &nbsp; jump</div>
+    </div>
+    <button id="start-btn" class="btn">Start Climbing</button>
+  </div>
+
+  <div id="gameover-screen" class="overlay hidden">
+    <h1 id="gameover-title">You Fell!</h1>
+    <p id="gameover-score">Height reached: 0m</p>
+    <p id="gameover-best"></p>
+    <button id="restart-btn" class="btn">Climb Again</button>
+  </div>
+
+  <div id="touch-controls">
+    <button id="btn-left" class="touch-btn">&larr;</button>
+    <button id="btn-jump" class="touch-btn">&uarr;</button>
+    <button id="btn-right" class="touch-btn">&rarr;</button>
+  </div>
+
+  <script src="vendor/three.min.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
