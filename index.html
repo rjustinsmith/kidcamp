@@ -11,12 +11,16 @@
 
   <div id="hud">
     <div id="score">Height: 0m</div>
+    <div id="shells">🐚 0</div>
     <div id="best">Best: 0m</div>
   </div>
+
+  <div id="hat-toast" class="hat-toast"></div>
 
   <div id="start-screen" class="overlay">
     <h1>🦀 Crab Climb</h1>
     <p>Scuttle up the mountain. Dodge the boulders, leap the crevices.</p>
+    <p>Collect shells to earn silly hats — and watch out for dad jokes.</p>
     <div class="controls-hint">
       <div><b>&larr; / A</b> &nbsp; <b>&rarr; / D</b> &nbsp; switch lane</div>
       <div><b>&uarr; / W / Space</b> &nbsp; jump</div>
@@ -27,8 +31,19 @@
   <div id="gameover-screen" class="overlay hidden">
     <h1 id="gameover-title">You Fell!</h1>
     <p id="gameover-score">Height reached: 0m</p>
+    <p id="gameover-hats"></p>
     <p id="gameover-best"></p>
     <button id="restart-btn" class="btn">Climb Again</button>
+  </div>
+
+  <div id="joke-screen" class="overlay hidden">
+    <h1>🤡 Dad Joke Checkpoint!</h1>
+    <p id="joke-setup"></p>
+    <div class="joke-options">
+      <button class="btn joke-btn" id="joke-opt-0"></button>
+      <button class="btn joke-btn joke-btn-alt" id="joke-opt-1"></button>
+    </div>
+    <p id="joke-reaction" class="joke-reaction"></p>
   </div>
 
   <div id="touch-controls">

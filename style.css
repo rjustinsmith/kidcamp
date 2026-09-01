@@ -28,11 +28,19 @@ html, body {
   right: 16px;
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   font-size: 22px;
   font-weight: 700;
   text-shadow: 0 2px 6px rgba(0,0,0,0.45);
   pointer-events: none;
   z-index: 5;
+}
+
+#shells {
+  font-size: 18px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 5px 16px;
+  border-radius: 999px;
 }
 
 .overlay {
@@ -91,6 +99,94 @@ html, body {
 .btn:active {
   transform: translateY(4px);
   box-shadow: 0 2px 0 #a13c12, 0 4px 10px rgba(0,0,0,0.35);
+}
+
+.hat-toast {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translate(-50%, -14px);
+  background: rgba(20, 20, 30, 0.82);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 6;
+  text-shadow: none;
+}
+
+.hat-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.joke-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.joke-btn {
+  margin-top: 0;
+  font-size: 16px;
+  padding: 13px 20px;
+  background: linear-gradient(180deg, #ff7a45, #d9531e);
+}
+
+.joke-btn-alt {
+  background: linear-gradient(180deg, #6fb8e0, #3a7bd5);
+  box-shadow: 0 6px 0 #285a9e, 0 8px 16px rgba(0,0,0,0.35);
+}
+
+.joke-btn-alt:active {
+  box-shadow: 0 2px 0 #285a9e, 0 4px 10px rgba(0,0,0,0.35);
+}
+
+.joke-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.joke-reaction {
+  font-size: 30px;
+  font-weight: 800;
+  margin-top: 16px;
+  min-height: 40px;
+}
+
+.joke-reaction.correct {
+  animation: cringe-pop 0.5s ease;
+}
+
+.joke-reaction .nevermind {
+  display: inline-block;
+  opacity: 0;
+  animation: fade-in-slow 0.5s ease forwards;
+  animation-delay: 0.55s;
+}
+
+@keyframes cringe-pop {
+  0% { transform: scale(0.4) rotate(-10deg); opacity: 0; }
+  60% { transform: scale(1.2) rotate(6deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes fade-in-slow {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .joke-reaction.correct { animation: none; }
+  .joke-reaction .nevermind { animation: none; opacity: 1; }
 }
 
 #touch-controls {

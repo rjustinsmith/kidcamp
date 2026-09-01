@@ -32,6 +32,18 @@
 
   const LANE_SWITCH_SPEED = 14; // how fast the crab slides between lanes
 
+  // Terrain undulates in "stairs up, then slide down" cycles layered on the
+  // overall upward climb, instead of one flat unbroken slope.
+  const STAIR_PERIOD = 55;      // distance (m) per climb+slide cycle
+  const STAIR_AMPLITUDE = 3.2;  // extra height (m) gained/lost per cycle
+  const STAIR_CLIMB_FRACTION = 0.35; // portion of the cycle spent climbing (rest is sliding)
+
+  const COLLECTIBLE_MIN_GAP = 5;
+  const COLLECTIBLE_MAX_GAP = 8;
+  const COLLECT_Z_RADIUS = 0.9;
+
+  const JOKE_INTERVAL = 300; // a dad joke checkpoint every N meters climbed
+
   // ---------- Renderer / scene / camera ----------
   const canvas = document.getElementById('game-canvas');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -74,27 +86,64 @@
   scene.add(sun.target);
 
   // ---------- Ground / mountain slope ----------
-  function groundY(z) {
-    return -z * Math.tan(SLOPE_ANGLE);
+  // Smoothstep, used to ease each climb/slide segment in and out.
+  function smooth01(t) {
+    return t * t * (3 - 2 * t);
   }
 
+  // Overall height is a steady climb with repeating "stairs up, then slide
+  // down" bumps layered on top — net progress per cycle stays positive
+  // because the base slope keeps rising underneath the oscillation.
+  function groundY(z) {
+    const climbed = Math.max(0, -z);
+    const base = climbed * Math.tan(SLOPE_ANGLE);
+    const cyclePos = climbed % STAIR_PERIOD;
+    const climbLen = STAIR_PERIOD * STAIR_CLIMB_FRACTION;
+    const slideLen = STAIR_PERIOD - climbLen;
+    let bump;
+    if (cyclePos <= climbLen) {
+      bump = smooth01(cyclePos / climbLen) * STAIR_AMPLITUDE;
+    } else {
+      bump = (1 - smooth01((cyclePos - climbLen) / slideLen)) * STAIR_AMPLITUDE;
+    }
+    return base + bump;
+  }
+
+  // Builds a ribbon mesh whose surface follows groundY(z) exactly, instead of
+  // a flat plane, so the stairs/slide undulation actually reads in 3D.
+  function buildTerrainStrip(halfWidth, zFrom, zTo, segments, yOffset, material) {
+    const positions = [];
+    const indices = [];
+    const span = zFrom - zTo;
+    for (let i = 0; i <= segments; i++) {
+      const z = zFrom - (span * i) / segments;
+      const y = groundY(z) + yOffset;
+      positions.push(-halfWidth, y, z, halfWidth, y, z);
+    }
+    for (let i = 0; i < segments; i++) {
+      const a = i * 2, b = i * 2 + 1, c = (i + 1) * 2, d = (i + 1) * 2 + 1;
+      indices.push(a, c, b, b, c, d);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    const mesh = new THREE.Mesh(geo, material);
+    mesh.receiveShadow = true;
+    return mesh;
+  }
+
+  const TERRAIN_Z_FROM = 40;
+  const TERRAIN_Z_TO = -(WIN_DISTANCE + 150);
+  const TERRAIN_SEGMENTS = 450;
+
   const groundMat = new THREE.MeshStandardMaterial({ color: 0x7fae5b, roughness: 0.95 });
-  const groundGeo = new THREE.PlaneGeometry(60, 2200, 1, 1);
-  const ground = new THREE.Mesh(groundGeo, groundMat);
-  // Rotating a flat plane about X by (-90deg + SLOPE_ANGLE) makes its surface
-  // satisfy world.y = -world.z * tan(SLOPE_ANGLE), matching groundY() exactly.
-  ground.rotation.x = -Math.PI / 2 + SLOPE_ANGLE;
-  ground.receiveShadow = true;
+  const ground = buildTerrainStrip(30, TERRAIN_Z_FROM, TERRAIN_Z_TO, TERRAIN_SEGMENTS, 0, groundMat);
   scene.add(ground);
 
   // A rocky path strip down the middle lanes for visual clarity
   const pathMat = new THREE.MeshStandardMaterial({ color: 0x9a8266, roughness: 1 });
-  const pathGeo = new THREE.PlaneGeometry(LANE_WIDTH * 2 + 3, 2200, 1, 1);
-  const path = new THREE.Mesh(pathGeo, pathMat);
-  path.rotation.x = ground.rotation.x;
-  path.position.copy(ground.position);
-  path.position.y += 0.01;
-  path.receiveShadow = true;
+  const path = buildTerrainStrip(LANE_WIDTH + 1.5, TERRAIN_Z_FROM, TERRAIN_Z_TO, TERRAIN_SEGMENTS, 0.01, pathMat);
   scene.add(path);
 
   // ---------- Crab model ----------
@@ -167,14 +216,192 @@
       });
     }
 
+    const hatSlot = new THREE.Group();
+    hatSlot.position.set(0, 1.05, -0.1);
+    crab.add(hatSlot);
+
     crab.userData.legs = legs;
     crab.userData.claws = claws;
+    crab.userData.hatSlot = hatSlot;
     return crab;
   }
 
   const crab = createCrab();
   crab.castShadow = true;
   scene.add(crab);
+
+  // ---------- Silly hats (checkpoint rewards) ----------
+  function buildPartyHat() {
+    const g = new THREE.Group();
+    const coneMat = new THREE.MeshStandardMaterial({ color: 0xff4fa3, roughness: 0.5 });
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.55, 10), coneMat);
+    cone.position.y = 0.275;
+    cone.castShadow = true;
+    g.add(cone);
+    const bandMat = new THREE.MeshStandardMaterial({ color: 0xffd23f, roughness: 0.5 });
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.035, 8, 16), bandMat);
+    band.rotation.x = Math.PI / 2;
+    band.position.y = 0.02;
+    g.add(band);
+    const pom = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }));
+    pom.position.y = 0.56;
+    g.add(pom);
+    return g;
+  }
+
+  function buildPropellerCap() {
+    const g = new THREE.Group();
+    const capMat = new THREE.MeshStandardMaterial({ color: 0x3a7bd5, roughness: 0.6 });
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
+    cap.position.y = 0.02;
+    g.add(cap);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.16, 6), new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.5, metalness: 0.4 }));
+    stem.position.y = 0.38;
+    g.add(stem);
+    const propGroup = new THREE.Group();
+    propGroup.position.y = 0.46;
+    const bladeMat = new THREE.MeshStandardMaterial({ color: 0xffd23f, roughness: 0.4 });
+    const blade1 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.09), bladeMat);
+    propGroup.add(blade1);
+    const blade2 = blade1.clone();
+    blade2.rotation.y = Math.PI / 2;
+    propGroup.add(blade2);
+    g.add(propGroup);
+    g.userData.propeller = propGroup;
+    return g;
+  }
+
+  function buildPirateHat() {
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.6 });
+    const brim = new THREE.Mesh(new THREE.SphereGeometry(0.4, 14, 10), mat);
+    brim.scale.set(1, 0.35, 0.62);
+    brim.position.y = 0.06;
+    g.add(brim);
+    const crest = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), mat);
+    crest.scale.set(0.55, 0.5, 1);
+    crest.position.set(0, 0.22, 0);
+    g.add(crest);
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshStandardMaterial({ color: 0xf2f2f2 }));
+    skull.position.set(0, 0.15, 0.28);
+    g.add(skull);
+    const feather = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.4, 6), new THREE.MeshStandardMaterial({ color: 0xd9531e, roughness: 0.5 }));
+    feather.position.set(-0.32, 0.28, -0.05);
+    feather.rotation.z = 0.6;
+    g.add(feather);
+    return g;
+  }
+
+  function buildWizardHat() {
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: 0x4b2e83, roughness: 0.55 });
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.04, 16), mat);
+    brim.position.y = 0.02;
+    g.add(brim);
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.75, 12), mat);
+    cone.position.y = 0.42;
+    g.add(cone);
+    const starMat = new THREE.MeshStandardMaterial({ color: 0xffd23f, emissive: 0x654a00, roughness: 0.4 });
+    for (let i = 0; i < 3; i++) {
+      const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.045, 0), starMat);
+      const h = 0.2 + i * 0.18;
+      const ang = i * 2.1;
+      const r = 0.14 * (1 - h / 0.75);
+      star.position.set(Math.cos(ang) * r, h, Math.sin(ang) * r);
+      g.add(star);
+    }
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), starMat);
+    tip.position.y = 0.8;
+    g.add(tip);
+    return g;
+  }
+
+  function buildSombrero() {
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: 0xe8a33d, roughness: 0.6 });
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.03, 20), mat);
+    brim.position.y = 0.02;
+    g.add(brim);
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.03, 8, 20), new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.5 }));
+    band.rotation.x = Math.PI / 2;
+    band.position.y = 0.18;
+    g.add(band);
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 0.32, 16), mat);
+    crown.position.y = 0.2;
+    g.add(crown);
+    return g;
+  }
+
+  function buildCrownHat() {
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffd23f, roughness: 0.3, metalness: 0.6 });
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.32, 0.16, 16), mat);
+    band.position.y = 0.08;
+    g.add(band);
+    const gemMat = new THREE.MeshStandardMaterial({ color: 0xd63447, roughness: 0.2, metalness: 0.3 });
+    const spikeCount = 6;
+    for (let i = 0; i < spikeCount; i++) {
+      const ang = (i / spikeCount) * Math.PI * 2;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.22, 6), mat);
+      spike.position.set(Math.cos(ang) * 0.29, 0.16 + 0.11, Math.sin(ang) * 0.29);
+      g.add(spike);
+      if (i % 2 === 0) {
+        const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.035, 0), gemMat);
+        gem.position.set(Math.cos(ang) * 0.3, 0.12, Math.sin(ang) * 0.3);
+        g.add(gem);
+      }
+    }
+    return g;
+  }
+
+  // Each tier unlocks once enough shells have been collected (not just by
+  // climbing far enough) — hats are earned, not handed out for free.
+  const HAT_TIERS = [
+    { need: 5, name: 'Party Hat', build: buildPartyHat },
+    { need: 10, name: 'Propeller Cap', build: buildPropellerCap },
+    { need: 16, name: 'Pirate Hat', build: buildPirateHat },
+    { need: 24, name: 'Wizard Hat', build: buildWizardHat },
+    { need: 34, name: 'Sombrero', build: buildSombrero },
+    { need: 46, name: 'Champion Crown', build: buildCrownHat },
+  ];
+
+  let currentHatTier = -1;
+  let currentHatMesh = null;
+  let hatPopStart = 0;
+  const hatToastEl = document.getElementById('hat-toast');
+  let hatToastTimeout = null;
+
+  function showHatToast(text) {
+    hatToastEl.textContent = text;
+    hatToastEl.classList.add('show');
+    clearTimeout(hatToastTimeout);
+    hatToastTimeout = setTimeout(() => hatToastEl.classList.remove('show'), 2200);
+  }
+
+  function unlockHat(index) {
+    currentHatTier = index;
+    if (currentHatMesh) crab.userData.hatSlot.remove(currentHatMesh);
+    currentHatMesh = HAT_TIERS[index].build();
+    crab.userData.hatSlot.add(currentHatMesh);
+    hatPopStart = clock.elapsedTime;
+    showHatToast(`🎉 New hat: ${HAT_TIERS[index].name}!`);
+  }
+
+  function resetHats() {
+    currentHatTier = -1;
+    if (currentHatMesh) {
+      crab.userData.hatSlot.remove(currentHatMesh);
+      currentHatMesh = null;
+    }
+    clearTimeout(hatToastTimeout);
+    hatToastEl.classList.remove('show');
+  }
+
+  function checkHatUnlocks(shellsCollected) {
+    while (currentHatTier + 1 < HAT_TIERS.length && shellsCollected >= HAT_TIERS[currentHatTier + 1].need) {
+      unlockHat(currentHatTier + 1);
+    }
+  }
 
   // ---------- Summit flag ----------
   const flagGroup = new THREE.Group();
@@ -276,6 +503,111 @@
     furthestSceneryZ = -10;
   }
 
+  // ---------- Collectible shells (earn the hats) ----------
+  const shellMat = new THREE.MeshStandardMaterial({
+    color: 0xffe3b0,
+    emissive: 0x7a4a00,
+    emissiveIntensity: 0.35,
+    roughness: 0.3,
+    metalness: 0.15,
+  });
+  const shellGeo = new THREE.OctahedronGeometry(0.26, 0);
+
+  let activeShells = [];
+  let furthestShellZ = -8;
+  let shellsCollected = 0;
+
+  function spawnShell() {
+    const z = furthestShellZ;
+    furthestShellZ -= COLLECTIBLE_MIN_GAP + Math.random() * (COLLECTIBLE_MAX_GAP - COLLECTIBLE_MIN_GAP);
+
+    const lane = Math.floor(Math.random() * 3);
+    const mesh = new THREE.Mesh(shellGeo, shellMat);
+    mesh.position.set(LANES_X[lane], groundY(z) + 0.55, z);
+    mesh.castShadow = true;
+    scene.add(mesh);
+    activeShells.push({ mesh, z, lane });
+  }
+
+  function resetShells() {
+    activeShells.forEach((s) => scene.remove(s.mesh));
+    activeShells = [];
+    furthestShellZ = -8;
+    shellsCollected = 0;
+  }
+
+  function collectShellsNearCrab() {
+    activeShells = activeShells.filter((s) => {
+      if (s.lane !== currentLane) return true;
+      if (Math.abs(s.z - crab.position.z) > COLLECT_Z_RADIUS) return true;
+      scene.remove(s.mesh);
+      shellsCollected += 1;
+      checkHatUnlocks(shellsCollected);
+      return false;
+    });
+  }
+
+  // ---------- Dad joke checkpoints ----------
+  // Every JOKE_INTERVAL meters, the climb pauses for a groan-worthy dad joke.
+  // Guess the punchline right and Dad gets an eye-roll; guess wrong and the
+  // joke just... trails off.
+  const DAD_JOKES = [
+    { setup: 'Why did the crab never share his snacks?', correct: "Because he's shellfish.", wrong: "Because he's a-claw-ful at sharing." },
+    { setup: 'What do you call a crab that plays baseball?', correct: 'A pinch hitter.', wrong: 'A sandy slugger.' },
+    { setup: 'Why did the crab blush?', correct: 'Because the seaweed.', wrong: 'Because he pinched himself.' },
+    { setup: "What's a crab's favorite day of the week?", correct: 'Fry-day.', wrong: 'Sun-day, obviously.' },
+    { setup: 'Why was the crab such a good drummer?', correct: 'Because he always had the right snap.', wrong: 'Because he never missed a beat-le.' },
+  ];
+
+  const jokeScreen = document.getElementById('joke-screen');
+  const jokeSetupEl = document.getElementById('joke-setup');
+  const jokeReactionEl = document.getElementById('joke-reaction');
+  const jokeOptButtons = [document.getElementById('joke-opt-0'), document.getElementById('joke-opt-1')];
+
+  let lastJokeTier = 0;
+  let jokeResumeTimeout = null;
+
+  function shufflePair(a, b) {
+    return Math.random() < 0.5 ? [a, b] : [b, a];
+  }
+
+  function triggerJoke(index) {
+    state.mode = 'joke';
+    const joke = DAD_JOKES[((index % DAD_JOKES.length) + DAD_JOKES.length) % DAD_JOKES.length];
+    jokeSetupEl.textContent = joke.setup;
+    const options = shufflePair(joke.correct, joke.wrong);
+    jokeReactionEl.textContent = '';
+    jokeReactionEl.className = 'joke-reaction';
+    jokeOptButtons.forEach((btn, i) => {
+      btn.textContent = options[i];
+      btn.disabled = false;
+      btn.onclick = () => answerJoke(options[i] === joke.correct);
+    });
+    jokeScreen.classList.remove('hidden');
+  }
+
+  function answerJoke(correct) {
+    jokeOptButtons.forEach((btn) => { btn.disabled = true; });
+    if (correct) {
+      jokeReactionEl.textContent = '🙄 Dad!';
+      jokeReactionEl.className = 'joke-reaction correct';
+    } else {
+      jokeReactionEl.innerHTML = '… <span class="nevermind">nevermind.</span>';
+      jokeReactionEl.className = 'joke-reaction wrong';
+    }
+    clearTimeout(jokeResumeTimeout);
+    jokeResumeTimeout = setTimeout(() => {
+      jokeScreen.classList.add('hidden');
+      if (state.mode === 'joke') state.mode = 'playing';
+    }, 1600);
+  }
+
+  function resetJokes() {
+    lastJokeTier = 0;
+    clearTimeout(jokeResumeTimeout);
+    jokeScreen.classList.add('hidden');
+  }
+
   // ---------- Input ----------
   const keys = { left: false, right: false, jump: false };
   let currentLane = 1; // index into LANES_X
@@ -323,13 +655,15 @@
   document.getElementById('btn-jump').addEventListener('click', () => requestJump());
 
   // ---------- Game state ----------
-  const state = { mode: 'start' }; // 'start' | 'playing' | 'gameover' | 'win'
+  const state = { mode: 'start' }; // 'start' | 'playing' | 'joke' | 'gameover' | 'win'
   const scoreEl = document.getElementById('score');
+  const shellsEl = document.getElementById('shells');
   const bestEl = document.getElementById('best');
   const startScreen = document.getElementById('start-screen');
   const gameoverScreen = document.getElementById('gameover-screen');
   const gameoverTitle = document.getElementById('gameover-title');
   const gameoverScore = document.getElementById('gameover-score');
+  const gameoverHats = document.getElementById('gameover-hats');
   const gameoverBest = document.getElementById('gameover-best');
 
   const BEST_KEY = 'crabClimb.bestHeight';
@@ -351,9 +685,14 @@
 
     resetObstacles();
     resetScenery();
+    resetShells();
+    resetHats();
+    resetJokes();
     for (let i = 0; i < 6; i++) spawnObstacle();
     for (let i = 0; i < 14; i++) spawnScenery();
+    for (let i = 0; i < 5; i++) spawnShell();
 
+    shellsEl.textContent = `🐚 0`;
     startScreen.classList.add('hidden');
     gameoverScreen.classList.add('hidden');
     state.mode = 'playing';
@@ -370,6 +709,7 @@
     gameoverScore.textContent = won
       ? `You climbed all ${heightM}m to the top!`
       : `Height reached: ${heightM}m`;
+    gameoverHats.textContent = `Hats earned: ${currentHatTier + 1}/${HAT_TIERS.length} · Shells: ${shellsCollected}`;
     gameoverBest.textContent = isNewBest ? 'New best height!' : `Best: ${Math.max(best, heightM)}m`;
     gameoverScreen.classList.remove('hidden');
     bestEl.textContent = `Best: ${Math.max(best, heightM)}m`;
@@ -411,6 +751,14 @@
     crab.position.z -= speed * dt;
     distance = -crab.position.z;
 
+    // Dad joke checkpoint — pause the climb and quiz the player
+    const jokeTier = Math.floor(distance / JOKE_INTERVAL);
+    if (jokeTier > lastJokeTier) {
+      lastJokeTier = jokeTier;
+      triggerJoke(jokeTier - 1);
+      return;
+    }
+
     // Lane sliding
     const targetX = LANES_X[currentLane];
     const dx = targetX - crab.position.x;
@@ -438,6 +786,15 @@
     });
     crab.rotation.z = Math.sin(walkPhase * 0.5) * 0.03;
 
+    // Hat pop-in animation + propeller spin for the checkpoint reward hats
+    if (currentHatMesh) {
+      const age = clock.elapsedTime - hatPopStart;
+      currentHatMesh.scale.setScalar(Math.min(1, age / 0.3));
+      if (currentHatMesh.userData.propeller) {
+        currentHatMesh.userData.propeller.rotation.y += dt * 16;
+      }
+    }
+
     // Spawn ahead / despawn behind — obstacles
     while (furthestObstacleZ > crab.position.z - SPAWN_AHEAD) spawnObstacle();
     activeObstacles = activeObstacles.filter((o) => {
@@ -457,6 +814,19 @@
       }
       return true;
     });
+
+    // Spawn ahead / despawn behind — collectible shells
+    while (furthestShellZ > crab.position.z - SPAWN_AHEAD) spawnShell();
+    activeShells = activeShells.filter((s) => {
+      if (s.z > crab.position.z + DESPAWN_BEHIND) {
+        scene.remove(s.mesh);
+        return false;
+      }
+      return true;
+    });
+    collectShellsNearCrab();
+    activeShells.forEach((s) => { s.mesh.rotation.y += dt * 2.2; });
+    shellsEl.textContent = `🐚 ${shellsCollected}`;
 
     // Camera follow
     camera.position.set(
