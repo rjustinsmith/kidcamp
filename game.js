@@ -42,7 +42,12 @@
   const COLLECTIBLE_MAX_GAP = 8;
   const COLLECT_Z_RADIUS = 0.9;
 
-  const JOKE_INTERVAL = 50; // a dad joke checkpoint every N meters climbed
+  const JOKE_INTERVAL = 100; // a dad joke checkpoint every N meters climbed
+
+  const PIE_MIN_GAP = 60;   // min distance (m) before the next pie appears
+  const PIE_MAX_GAP = 110;  // max distance (m) before the next pie appears
+  const PIE_FIRST_Z = -40;
+  const INVINCIBLE_DURATION = 30; // seconds
 
   // ---------- Renderer / scene / camera ----------
   const canvas = document.getElementById('game-canvas');
@@ -420,7 +425,50 @@
   // ---------- Obstacles ----------
   const rockGeo = new THREE.DodecahedronGeometry(1, 0);
   const rockMat = new THREE.MeshStandardMaterial({ color: 0x6b6459, roughness: 0.9 });
-  const crevMat = new THREE.MeshStandardMaterial({ color: 0x1c1108, roughness: 1 });
+
+  const CREVICE_WIDTH = LANE_WIDTH * 3 + 1;
+  const CREVICE_DEPTH = 1.4;   // z-length of the gap
+  const CREVICE_PIT = 1.5;     // how far down the pit walls drop
+  const crevFloorMat = new THREE.MeshStandardMaterial({ color: 0x120b06, roughness: 1 });
+  const crevWallMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1c, roughness: 0.95, side: THREE.DoubleSide });
+  const crevRimMat = new THREE.MeshStandardMaterial({ color: 0x5c4a35, roughness: 0.9 });
+
+  // A real sunken pit — floor, two side walls, and jagged broken rim rocks —
+  // instead of a flat dark decal painted on the ground.
+  function buildCrevice(z) {
+    const g = new THREE.Group();
+
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(CREVICE_WIDTH, CREVICE_DEPTH), crevFloorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -CREVICE_PIT;
+    floor.receiveShadow = true;
+    g.add(floor);
+
+    [CREVICE_DEPTH / 2, -CREVICE_DEPTH / 2].forEach((zOff) => {
+      const wall = new THREE.Mesh(new THREE.PlaneGeometry(CREVICE_WIDTH, CREVICE_PIT), crevWallMat);
+      wall.position.set(0, -CREVICE_PIT / 2, zOff);
+      wall.receiveShadow = true;
+      g.add(wall);
+    });
+
+    for (let i = 0; i < 10; i++) {
+      const rock = new THREE.Mesh(rockGeo, crevRimMat);
+      const s = 0.14 + Math.random() * 0.22;
+      rock.scale.setScalar(s);
+      const side = i % 2 === 0 ? -1 : 1;
+      rock.position.set(
+        (Math.random() - 0.5) * CREVICE_WIDTH,
+        s * 0.35,
+        side * (CREVICE_DEPTH / 2 + Math.random() * 0.35)
+      );
+      rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      rock.castShadow = true;
+      g.add(rock);
+    }
+
+    g.position.set(0, groundY(z), z);
+    return g;
+  }
 
   let activeObstacles = [];
   let furthestObstacleZ = -14;
@@ -432,11 +480,7 @@
     const isCrevice = Math.random() < 0.28;
 
     if (isCrevice) {
-      const geo = new THREE.PlaneGeometry(LANE_WIDTH * 3 + 1, 1.4);
-      const mesh = new THREE.Mesh(geo, crevMat);
-      mesh.rotation.x = -Math.PI / 2;
-      mesh.position.set(0, groundY(z) + 0.02, z);
-      mesh.receiveShadow = true;
+      const mesh = buildCrevice(z);
       scene.add(mesh);
       activeObstacles.push({ mesh, z, lane: null, type: 'crevice' });
     } else {
@@ -545,6 +589,130 @@
       checkHatUnlocks(shellsCollected);
       return false;
     });
+  }
+
+  // ---------- Pie powerup (30s giant-hat invincibility) ----------
+  function buildPie() {
+    const g = new THREE.Group();
+    const crust = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.32, 0.34, 0.14, 16),
+      new THREE.MeshStandardMaterial({ color: 0xd9a441, roughness: 0.6 })
+    );
+    g.add(crust);
+    const filling = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.27, 0.27, 0.05, 16),
+      new THREE.MeshStandardMaterial({ color: 0xb5432a, roughness: 0.5 })
+    );
+    filling.position.y = 0.09;
+    g.add(filling);
+    const rim = new THREE.Mesh(
+      new THREE.TorusGeometry(0.33, 0.045, 8, 20),
+      new THREE.MeshStandardMaterial({ color: 0xe8c07a, roughness: 0.6 })
+    );
+    rim.rotation.x = Math.PI / 2;
+    rim.position.y = 0.02;
+    g.add(rim);
+    g.castShadow = true;
+    return g;
+  }
+
+  // The invincibility hat is just the party hat, blown up huge.
+  function buildGiantHat() {
+    const g = buildPartyHat();
+    g.scale.setScalar(2.4);
+    return g;
+  }
+
+  const invincibleBadgeEl = document.getElementById('invincible-badge');
+  const pieSplatEl = document.getElementById('pie-splat');
+
+  let activePie = null; // { mesh, z, lane }
+  let nextPieZ = PIE_FIRST_Z;
+  let pieDue = true;
+  let invincible = false;
+  let invincibleEndTime = 0;
+  let giantHatMesh = null;
+
+  function trySpawnPie() {
+    if (activePie || !pieDue) return;
+    if (nextPieZ < crab.position.z - SPAWN_AHEAD) return;
+    const lane = Math.floor(Math.random() * 3);
+    const mesh = buildPie();
+    mesh.position.set(LANES_X[lane], groundY(nextPieZ) + 0.5, nextPieZ);
+    scene.add(mesh);
+    activePie = { mesh, z: nextPieZ, lane };
+    pieDue = false;
+  }
+
+  function scheduleNextPie() {
+    nextPieZ = crab.position.z - (PIE_MIN_GAP + Math.random() * (PIE_MAX_GAP - PIE_MIN_GAP));
+    pieDue = true;
+  }
+
+  function resetPie() {
+    if (activePie) scene.remove(activePie.mesh);
+    activePie = null;
+    nextPieZ = PIE_FIRST_Z;
+    pieDue = true;
+  }
+
+  function activateInvincibility() {
+    invincible = true;
+    invincibleEndTime = clock.elapsedTime + INVINCIBLE_DURATION;
+    if (currentHatMesh) currentHatMesh.visible = false;
+    if (!giantHatMesh) giantHatMesh = buildGiantHat();
+    if (!giantHatMesh.parent) crab.userData.hatSlot.add(giantHatMesh);
+    showHatToast('🥧 PIE POWER! Invincible for 30s!');
+    invincibleBadgeEl.classList.remove('hidden');
+  }
+
+  function endInvincibility() {
+    invincible = false;
+    if (giantHatMesh) crab.userData.hatSlot.remove(giantHatMesh);
+    if (currentHatMesh) currentHatMesh.visible = true;
+    invincibleBadgeEl.classList.add('hidden');
+    pieSplatEl.classList.remove('splat');
+    void pieSplatEl.offsetWidth; // restart the splat animation
+    pieSplatEl.classList.add('splat');
+  }
+
+  function resetInvincibility() {
+    invincible = false;
+    if (giantHatMesh && giantHatMesh.parent) crab.userData.hatSlot.remove(giantHatMesh);
+    if (currentHatMesh) currentHatMesh.visible = true;
+    invincibleBadgeEl.classList.add('hidden');
+    pieSplatEl.classList.remove('splat');
+  }
+
+  function updatePie(dt) {
+    while (activePie && activePie.z > crab.position.z + DESPAWN_BEHIND) {
+      scene.remove(activePie.mesh);
+      activePie = null;
+      scheduleNextPie();
+    }
+    trySpawnPie();
+
+    if (activePie) {
+      activePie.mesh.rotation.y += dt * 1.6;
+      if (activePie.lane === currentLane && Math.abs(activePie.z - crab.position.z) <= COLLECT_Z_RADIUS) {
+        scene.remove(activePie.mesh);
+        activePie = null;
+        scheduleNextPie();
+        activateInvincibility();
+      }
+    }
+
+    if (invincible) {
+      const remaining = invincibleEndTime - clock.elapsedTime;
+      if (remaining <= 0) {
+        endInvincibility();
+      } else {
+        invincibleBadgeEl.textContent = `🥧 Invincible: ${Math.ceil(remaining)}s`;
+        if (giantHatMesh) {
+          giantHatMesh.scale.setScalar(2.4 + Math.sin(clock.elapsedTime * 6) * 0.15);
+        }
+      }
+    }
   }
 
   // ---------- Dad joke checkpoints ----------
@@ -691,6 +859,8 @@
     resetShells();
     resetHats();
     resetJokes();
+    resetPie();
+    resetInvincibility();
     for (let i = 0; i < 6; i++) spawnObstacle();
     for (let i = 0; i < 14; i++) spawnScenery();
     for (let i = 0; i < 5; i++) spawnShell();
@@ -731,14 +901,24 @@
   crab.position.set(LANES_X[1], groundY(0), 0);
 
   function checkCollisions() {
+    let destroyedAny = false;
     for (const o of activeObstacles) {
       if (Math.abs(o.z - crab.position.z) > COLLISION_Z_RADIUS) continue;
 
-      if (o.type === 'rock') {
-        if (o.lane === currentLane) return true;
-      } else if (o.type === 'crevice') {
-        if (crab.userData.hop < MIN_JUMP_HOP_TO_CLEAR_CREVICE) return true;
+      if (o.type === 'rock' && o.lane === currentLane) {
+        if (invincible) {
+          scene.remove(o.mesh);
+          o.destroyed = true;
+          destroyedAny = true;
+        } else {
+          return true;
+        }
+      } else if (o.type === 'crevice' && crab.userData.hop < MIN_JUMP_HOP_TO_CLEAR_CREVICE) {
+        if (!invincible) return true;
       }
+    }
+    if (destroyedAny) {
+      activeObstacles = activeObstacles.filter((o) => !o.destroyed);
     }
     return false;
   }
@@ -830,6 +1010,9 @@
     collectShellsNearCrab();
     activeShells.forEach((s) => { s.mesh.rotation.y += dt * 2.2; });
     shellsEl.textContent = `🐚 ${shellsCollected}`;
+
+    // Pie powerup — spawn/despawn/collect + invincibility countdown
+    updatePie(dt);
 
     // Camera follow
     camera.position.set(
