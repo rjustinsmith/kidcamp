@@ -42,7 +42,7 @@
   const COLLECTIBLE_MAX_GAP = 8;
   const COLLECT_Z_RADIUS = 0.9;
 
-  const JOKE_INTERVAL = 300; // a dad joke checkpoint every N meters climbed
+  const JOKE_INTERVAL = 50; // a dad joke checkpoint every N meters climbed
 
   // ---------- Renderer / scene / camera ----------
   const canvas = document.getElementById('game-canvas');
@@ -557,6 +557,9 @@
     { setup: 'Why did the crab blush?', correct: 'Because the seaweed.', wrong: 'Because he pinched himself.' },
     { setup: "What's a crab's favorite day of the week?", correct: 'Fry-day.', wrong: 'Sun-day, obviously.' },
     { setup: 'Why was the crab such a good drummer?', correct: 'Because he always had the right snap.', wrong: 'Because he never missed a beat-le.' },
+    { setup: 'What did the ocean say to the crab?', correct: 'Nothing, it just waved.', wrong: 'Nothing, it just shore did.' },
+    { setup: 'Why did the crab stay home from the party?', correct: 'He was feeling a little crabby.', wrong: 'He forgot his shell-phone charger.' },
+    { setup: "What's a crab's favorite kind of music?", correct: 'Anything with a good snap track.', wrong: 'Heavy metal — he’s got the claws for it.' },
   ];
 
   const jokeScreen = document.getElementById('joke-screen');
