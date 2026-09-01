@@ -28,7 +28,11 @@
   const SCENERY_MAX_GAP = 9;
 
   const COLLISION_Z_RADIUS = 0.85;
-  const WIN_DISTANCE = 420;
+
+  // The climb has no finish line — it's endless, scored by best height reached.
+  // Terrain and obstacle spawning just need to cover far more distance than any
+  // real run will reach (speed caps out well before this).
+  const TERRAIN_LENGTH = 10000;
 
   const LANE_SWITCH_SPEED = 14; // how fast the crab slides between lanes
 
@@ -44,9 +48,7 @@
 
   const JOKE_INTERVAL = 100; // a dad joke checkpoint every N meters climbed
 
-  const PIE_MIN_GAP = 60;   // min distance (m) before the next pie appears
-  const PIE_MAX_GAP = 110;  // max distance (m) before the next pie appears
-  const PIE_FIRST_Z = -40;
+  const PIE_INTERVAL = 300; // a pie powerup appears every N meters climbed
   const INVINCIBLE_DURATION = 30; // seconds
 
   // ---------- Renderer / scene / camera ----------
@@ -139,8 +141,8 @@
   }
 
   const TERRAIN_Z_FROM = 40;
-  const TERRAIN_Z_TO = -(WIN_DISTANCE + 150);
-  const TERRAIN_SEGMENTS = 450;
+  const TERRAIN_Z_TO = -TERRAIN_LENGTH;
+  const TERRAIN_SEGMENTS = 3500;
 
   const groundMat = new THREE.MeshStandardMaterial({ color: 0x7fae5b, roughness: 0.95 });
   const ground = buildTerrainStrip(30, TERRAIN_Z_FROM, TERRAIN_Z_TO, TERRAIN_SEGMENTS, 0, groundMat);
@@ -408,20 +410,6 @@
     }
   }
 
-  // ---------- Summit flag ----------
-  const flagGroup = new THREE.Group();
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0x8a8a8a, roughness: 0.4, metalness: 0.3 });
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4, 8), poleMat);
-  pole.position.y = 2;
-  flagGroup.add(pole);
-  const flagMat = new THREE.MeshStandardMaterial({ color: 0xffd23f, roughness: 0.6, side: THREE.DoubleSide });
-  const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.9), flagMat);
-  flag.position.set(0.75, 3.4, 0);
-  flagGroup.add(flag);
-  flagGroup.position.set(0, groundY(-WIN_DISTANCE), -WIN_DISTANCE);
-  flagGroup.castShadow = true;
-  scene.add(flagGroup);
-
   // ---------- Obstacles ----------
   const rockGeo = new THREE.DodecahedronGeometry(1, 0);
   const rockMat = new THREE.MeshStandardMaterial({ color: 0x6b6459, roughness: 0.9 });
@@ -627,33 +615,29 @@
   const pieSplatEl = document.getElementById('pie-splat');
 
   let activePie = null; // { mesh, z, lane }
-  let nextPieZ = PIE_FIRST_Z;
-  let pieDue = true;
+  let pieTier = 1; // next pie appears at z = -PIE_INTERVAL * pieTier
   let invincible = false;
   let invincibleEndTime = 0;
   let giantHatMesh = null;
 
+  // Pies sit at fixed checkpoints (every PIE_INTERVAL meters climbed) rather
+  // than a random gap — miss one and the next still shows up right on schedule.
   function trySpawnPie() {
-    if (activePie || !pieDue) return;
-    if (nextPieZ < crab.position.z - SPAWN_AHEAD) return;
+    if (activePie) return;
+    const z = -PIE_INTERVAL * pieTier;
+    if (z < crab.position.z - SPAWN_AHEAD) return;
     const lane = Math.floor(Math.random() * 3);
     const mesh = buildPie();
-    mesh.position.set(LANES_X[lane], groundY(nextPieZ) + 0.5, nextPieZ);
+    mesh.position.set(LANES_X[lane], groundY(z) + 0.5, z);
     scene.add(mesh);
-    activePie = { mesh, z: nextPieZ, lane };
-    pieDue = false;
-  }
-
-  function scheduleNextPie() {
-    nextPieZ = crab.position.z - (PIE_MIN_GAP + Math.random() * (PIE_MAX_GAP - PIE_MIN_GAP));
-    pieDue = true;
+    activePie = { mesh, z, lane };
+    pieTier += 1;
   }
 
   function resetPie() {
     if (activePie) scene.remove(activePie.mesh);
     activePie = null;
-    nextPieZ = PIE_FIRST_Z;
-    pieDue = true;
+    pieTier = 1;
   }
 
   function activateInvincibility() {
@@ -685,10 +669,9 @@
   }
 
   function updatePie(dt) {
-    while (activePie && activePie.z > crab.position.z + DESPAWN_BEHIND) {
+    if (activePie && activePie.z > crab.position.z + DESPAWN_BEHIND) {
       scene.remove(activePie.mesh);
       activePie = null;
-      scheduleNextPie();
     }
     trySpawnPie();
 
@@ -697,7 +680,6 @@
       if (activePie.lane === currentLane && Math.abs(activePie.z - crab.position.z) <= COLLECT_Z_RADIUS) {
         scene.remove(activePie.mesh);
         activePie = null;
-        scheduleNextPie();
         activateInvincibility();
       }
     }
@@ -809,8 +791,7 @@
       e.preventDefault();
       requestJump();
     } else if (e.code === 'Enter') {
-      if (state.mode === 'start') startGame();
-      else if (state.mode === 'gameover' || state.mode === 'win') startGame();
+      if (state.mode === 'start' || state.mode === 'gameover') startGame();
     }
   });
   window.addEventListener('keyup', (e) => {
@@ -826,7 +807,7 @@
   document.getElementById('btn-jump').addEventListener('click', () => requestJump());
 
   // ---------- Game state ----------
-  const state = { mode: 'start' }; // 'start' | 'playing' | 'joke' | 'gameover' | 'win'
+  const state = { mode: 'start' }; // 'start' | 'playing' | 'joke' | 'gameover'
   const scoreEl = document.getElementById('score');
   const shellsEl = document.getElementById('shells');
   const bestEl = document.getElementById('best');
@@ -871,17 +852,15 @@
     state.mode = 'playing';
   }
 
-  function endGame(won) {
-    state.mode = won ? 'win' : 'gameover';
+  function endGame() {
+    state.mode = 'gameover';
     const heightM = Math.floor(distance);
     const best = getBest();
     const isNewBest = heightM > best;
     if (isNewBest) setBest(heightM);
 
-    gameoverTitle.textContent = won ? '🏔️ Summit Reached!' : 'You Fell!';
-    gameoverScore.textContent = won
-      ? `You climbed all ${heightM}m to the top!`
-      : `Height reached: ${heightM}m`;
+    gameoverTitle.textContent = 'You Fell!';
+    gameoverScore.textContent = `Height reached: ${heightM}m`;
     gameoverHats.textContent = `Hats earned: ${currentHatTier + 1}/${HAT_TIERS.length} · Shells: ${shellsCollected}`;
     gameoverBest.textContent = isNewBest ? 'New best height!' : `Best: ${Math.max(best, heightM)}m`;
     gameoverScreen.classList.remove('hidden');
@@ -1033,13 +1012,8 @@
     // Score
     scoreEl.textContent = `Height: ${Math.floor(distance)}m`;
 
-    // Win / lose checks
-    if (distance >= WIN_DISTANCE) {
-      endGame(true);
-      return;
-    }
     if (checkCollisions()) {
-      endGame(false);
+      endGame();
     }
   }
 
