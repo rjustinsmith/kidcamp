@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KidCamp Registration</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <h1>🌞 KidCamp Summer Registration</h1>
+    <p>Pick a session and sign up your camper in a few minutes.</p>
+  </header>
+
+  <main>
+    <section id="sessions-section">
+      <h2>1. Choose a Camp Session</h2>
+      <div id="sessions-list" class="sessions-grid" aria-live="polite">
+        <p>Loading camp sessions…</p>
+      </div>
+    </section>
+
+    <section id="form-section">
+      <h2>2. Camper &amp; Guardian Information</h2>
+      <form id="registration-form" novalidate>
+        <input type="hidden" id="sessionId" name="sessionId" />
+
+        <div class="field">
+          <label for="camperName">Camper's full name</label>
+          <input type="text" id="camperName" name="camperName" required />
+          <span class="error" data-error-for="camperName"></span>
+        </div>
+
+        <div class="field">
+          <label for="camperAge">Camper's age</label>
+          <input type="number" id="camperAge" name="camperAge" min="1" max="18" required />
+          <span class="error" data-error-for="camperAge"></span>
+        </div>
+
+        <div class="field">
+          <label for="guardianName">Parent/guardian full name</label>
+          <input type="text" id="guardianName" name="guardianName" required />
+          <span class="error" data-error-for="guardianName"></span>
+        </div>
+
+        <div class="field">
+          <label for="guardianEmail">Parent/guardian email</label>
+          <input type="email" id="guardianEmail" name="guardianEmail" required />
+          <span class="error" data-error-for="guardianEmail"></span>
+        </div>
+
+        <div class="field">
+          <label for="guardianPhone">Parent/guardian phone</label>
+          <input type="tel" id="guardianPhone" name="guardianPhone" required />
+          <span class="error" data-error-for="guardianPhone"></span>
+        </div>
+
+        <div class="field">
+          <label for="emergencyContactName">Emergency contact name (if different)</label>
+          <input type="text" id="emergencyContactName" name="emergencyContactName" required />
+          <span class="error" data-error-for="emergencyContactName"></span>
+        </div>
+
+        <div class="field">
+          <label for="emergencyContactPhone">Emergency contact phone</label>
+          <input type="tel" id="emergencyContactPhone" name="emergencyContactPhone" required />
+          <span class="error" data-error-for="emergencyContactPhone"></span>
+        </div>
+
+        <div class="field">
+          <label for="allergiesOrNotes">Allergies, medical notes, or other info (optional)</label>
+          <textarea id="allergiesOrNotes" name="allergiesOrNotes" rows="3"></textarea>
+        </div>
+
+        <div class="field checkbox-field">
+          <label>
+            <input type="checkbox" id="waiverAgreed" name="waiverAgreed" required />
+            I am a parent/guardian and I agree to the camp waiver and activity policies.
+          </label>
+          <span class="error" data-error-for="waiverAgreed"></span>
+        </div>
+
+        <p id="form-message" class="form-message" role="alert"></p>
+
+        <button type="submit" id="submit-button">Submit Registration</button>
+      </form>
+    </section>
+
+    <section id="confirmation-section" hidden>
+      <h2>You're all set! 🎉</h2>
+      <p id="confirmation-text"></p>
+      <button id="register-another">Register Another Camper</button>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

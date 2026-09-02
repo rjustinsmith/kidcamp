@@ -1,0 +1,182 @@
+:root {
+  --sunshine: #ffb703;
+  --sky: #219ebc;
+  --deep-sky: #023047;
+  --grass: #52b788;
+  --danger: #d62828;
+  --paper: #fffaf0;
+  --ink: #22223b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.hero {
+  background: linear-gradient(135deg, var(--sky), var(--deep-sky));
+  color: white;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+}
+
+.hero h1 {
+  margin: 0 0 0.5rem;
+  font-size: 2rem;
+}
+
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+section {
+  margin-bottom: 2.5rem;
+}
+
+h2 {
+  border-bottom: 3px solid var(--sunshine);
+  padding-bottom: 0.4rem;
+}
+
+.sessions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.session-card {
+  background: white;
+  border: 2px solid #eee;
+  border-radius: 12px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.session-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--sky);
+}
+
+.session-card.selected {
+  border-color: var(--grass);
+  box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.35);
+}
+
+.session-card.full {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.session-card h3 {
+  margin-top: 0;
+}
+
+.session-meta {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.spots-left {
+  font-weight: bold;
+  color: var(--grass);
+}
+
+.spots-left.low {
+  color: var(--danger);
+}
+
+form {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 2px solid #eee;
+}
+
+.field {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.field label {
+  font-weight: bold;
+  margin-bottom: 0.3rem;
+}
+
+.field input[type="text"],
+.field input[type="email"],
+.field input[type="tel"],
+.field input[type="number"],
+.field textarea {
+  padding: 0.6rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.field input:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--sky);
+}
+
+.checkbox-field label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: normal;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  min-height: 1.1em;
+}
+
+.form-message {
+  min-height: 1.2em;
+  font-weight: bold;
+}
+
+.form-message.error-message {
+  color: var(--danger);
+}
+
+button {
+  background: var(--sunshine);
+  color: var(--deep-sky);
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1.05rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.05);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+#confirmation-section {
+  background: white;
+  border: 2px solid var(--grass);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+}
