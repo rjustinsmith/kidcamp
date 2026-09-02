@@ -620,6 +620,58 @@
   let invincibleEndTime = 0;
   let giantHatMesh = null;
 
+  const FLYING_PIE_DURATION = 0.4; // seconds for the pie to close in on the camera
+  let flyingPie = null; // { mesh, startPos, elapsed }
+
+  function showPieSplatOverlay() {
+    pieSplatEl.classList.remove('splat');
+    void pieSplatEl.offsetWidth; // restart the animation
+    pieSplatEl.classList.add('splat');
+  }
+
+  // Launches a pie from right in front of the crab straight at the camera,
+  // growing huge as it closes the distance, so it reads as "splatting in
+  // your face" rather than an overlay just appearing out of nowhere.
+  function launchFlyingPie() {
+    if (flyingPie) scene.remove(flyingPie.mesh);
+    const mesh = buildPie();
+    const startPos = new THREE.Vector3(crab.position.x, crab.position.y + 1.1, crab.position.z + 0.6);
+    mesh.position.copy(startPos);
+    scene.add(mesh);
+    flyingPie = { mesh, startPos, elapsed: 0 };
+  }
+
+  function updateFlyingPie(dt) {
+    if (!flyingPie) return;
+    flyingPie.elapsed += dt;
+    const t = Math.min(flyingPie.elapsed / FLYING_PIE_DURATION, 1);
+    const ease = t * t; // accelerate in, like it's closing distance fast
+
+    const targetX = camera.position.x;
+    const targetY = camera.position.y;
+    const targetZ = camera.position.z + 1.0; // slightly past the lens for impact
+
+    flyingPie.mesh.position.set(
+      flyingPie.startPos.x + (targetX - flyingPie.startPos.x) * ease,
+      flyingPie.startPos.y + (targetY - flyingPie.startPos.y) * ease,
+      flyingPie.startPos.z + (targetZ - flyingPie.startPos.z) * ease
+    );
+    flyingPie.mesh.scale.setScalar(1 + ease * 9);
+    flyingPie.mesh.rotation.x += dt * 10;
+    flyingPie.mesh.rotation.z += dt * 6;
+
+    if (t >= 1) {
+      scene.remove(flyingPie.mesh);
+      flyingPie = null;
+      showPieSplatOverlay();
+    }
+  }
+
+  function resetFlyingPie() {
+    if (flyingPie) scene.remove(flyingPie.mesh);
+    flyingPie = null;
+  }
+
   // Pies sit at fixed checkpoints (every PIE_INTERVAL meters climbed) rather
   // than a random gap — miss one and the next still shows up right on schedule.
   function trySpawnPie() {
@@ -655,9 +707,7 @@
     if (giantHatMesh) crab.userData.hatSlot.remove(giantHatMesh);
     if (currentHatMesh) currentHatMesh.visible = true;
     invincibleBadgeEl.classList.add('hidden');
-    pieSplatEl.classList.remove('splat');
-    void pieSplatEl.offsetWidth; // restart the splat animation
-    pieSplatEl.classList.add('splat');
+    launchFlyingPie();
   }
 
   function resetInvincibility() {
@@ -666,6 +716,7 @@
     if (currentHatMesh) currentHatMesh.visible = true;
     invincibleBadgeEl.classList.add('hidden');
     pieSplatEl.classList.remove('splat');
+    resetFlyingPie();
   }
 
   function updatePie(dt) {
@@ -993,7 +1044,7 @@
     // Pie powerup — spawn/despawn/collect + invincibility countdown
     updatePie(dt);
 
-    // Camera follow
+    // Camera follow (updateFlyingPie needs this frame's fresh camera position)
     camera.position.set(
       crab.position.x + CAMERA_OFFSET.x,
       crab.position.y + CAMERA_OFFSET.y,
@@ -1008,6 +1059,8 @@
 
     sun.position.set(crab.position.x - 20, crab.position.y + 40, crab.position.z + 15);
     sun.target.position.copy(crab.position);
+
+    updateFlyingPie(dt);
 
     // Score
     scoreEl.textContent = `Height: ${Math.floor(distance)}m`;
