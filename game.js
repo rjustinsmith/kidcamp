@@ -1,6 +1,6 @@
-// Crab Climb — a basic 3D obstacle game built with three.js.
-// A crab scrambles up a sloped mountain lane-runner style: dodge boulders,
-// leap crevices, and reach the summit before you fall.
+// Crabby Daddy — a basic 3D obstacle game built with three.js.
+// A crab scrambles up an endless mountain lane-runner style: dodge boulders,
+// leap crevices, and climb as high as you can before you fall.
 
 (() => {
   'use strict';
@@ -869,7 +869,7 @@
   const gameoverHats = document.getElementById('gameover-hats');
   const gameoverBest = document.getElementById('gameover-best');
 
-  const BEST_KEY = 'crabClimb.bestHeight';
+  const BEST_KEY = 'crabbyDaddy.bestHeight';
   function getBest() {
     return Number(localStorage.getItem(BEST_KEY) || 0);
   }
