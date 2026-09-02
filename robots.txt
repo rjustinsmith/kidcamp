@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rjustinsmith.github.io/kidcamp/sitemap.xml
