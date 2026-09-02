@@ -1,0 +1,1443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Diggle is a free browser-based pixel-art tunnel-crossing game: hop the mole rat Diggle past spiky hedgehogs and ride moving carrot stepping-stones before the tunnel caves in behind you. Play instantly, no download needed.">
+<meta name="keywords" content="Diggle, browser game, arcade game, free online game, kids game, pixel art game, tunnel game">
+<meta property="og:title" content="Diggle - a pixel tunnel-crosser">
+<meta property="og:description" content="Hop past spiky hedgehogs and ride moving carrot stepping-stones before the tunnel caves in behind you. Free, plays instantly in your browser.">
+<meta property="og:type" content="website">
+<title>Diggle</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap">
+<style>
+  :root{
+    --soil-dark:#1b120c;
+    --soil:#4a2f1e;
+    --soil-light:#7a5030;
+    --moss:#6b9c4f;
+    --moss-dark:#3f6431;
+    --amber:#f4a942;
+    --amber-dark:#c97f22;
+    --coral:#e8553f;
+    --coral-dark:#a83926;
+    --cream:#f6ecd9;
+    --ink:#150d08;
+    --page-bg:#0d0805;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100%;
+    background:
+      radial-gradient(ellipse at 50% 30%, #241708 0%, var(--page-bg) 70%);
+    color:var(--cream);
+    font-family:"Pixelify Sans","VT323",monospace;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px 12px;
+  }
+
+  .stage{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    max-width:420px;
+  }
+
+  .cabinet{
+    position:relative;
+    width:min(460px, 94vw);
+    border-radius:18px;
+    padding:10px;
+    background:linear-gradient(180deg,#3a2513,#241605);
+    border:3px solid var(--soil-dark);
+    box-shadow:
+      0 0 0 2px var(--amber-dark) inset,
+      0 12px 28px rgba(0,0,0,.55);
+  }
+
+  .hud{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:4px 8px 8px;
+    font-family:"VT323",monospace;
+    font-size:22px;
+    letter-spacing:.5px;
+    color:var(--cream);
+  }
+
+  .hud .stat-label{
+    font-size:13px;
+    font-family:"Pixelify Sans",monospace;
+    color:var(--amber);
+    display:block;
+    letter-spacing:1px;
+  }
+
+  .hud .stat{ text-align:left; min-width:64px; }
+  .hud .stat.right{ text-align:right; }
+
+  #muteBtn{
+    background:none;
+    border:2px solid var(--amber-dark);
+    color:var(--cream);
+    border-radius:6px;
+    width:34px;
+    height:30px;
+    font-size:16px;
+    cursor:pointer;
+    line-height:1;
+  }
+  #muteBtn:hover{ border-color:var(--amber); }
+
+  .screen-frame{
+    position:relative;
+    border-radius:10px;
+    overflow:hidden;
+    border:2px solid var(--soil-dark);
+    box-shadow:0 0 0 3px #000 inset;
+    aspect-ratio:1/1;
+    background:var(--soil-dark);
+  }
+
+  canvas#game{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    image-rendering:pixelated;
+    image-rendering:-moz-crisp-edges;
+    display:block;
+    touch-action:none;
+  }
+
+  .overlay{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    text-align:center;
+    padding:20px;
+    background:rgba(20,12,6,.86);
+  }
+
+  .title-logo{
+    font-family:"Pixelify Sans",monospace;
+    font-weight:700;
+    font-size:56px;
+    color:var(--amber);
+    text-shadow:3px 3px 0 var(--coral-dark), 0 0 22px rgba(244,169,66,.35);
+    line-height:1;
+    text-wrap:balance;
+  }
+
+  .subtitle{
+    font-family:"VT323",monospace;
+    font-size:20px;
+    color:var(--cream);
+    max-width:26ch;
+  }
+
+  .howto{
+    font-family:"VT323",monospace;
+    font-size:17px;
+    color:#cbb79c;
+    max-width:26ch;
+    line-height:1.4;
+  }
+
+  .howto b{ color:var(--moss); }
+
+  .btn{
+    font-family:"Pixelify Sans",monospace;
+    font-weight:600;
+    font-size:17px;
+    color:var(--ink);
+    background:var(--amber);
+    border:none;
+    border-bottom:4px solid var(--amber-dark);
+    border-radius:8px;
+    padding:11px 22px;
+    cursor:pointer;
+    letter-spacing:.5px;
+  }
+  .btn:active{ transform:translateY(2px); border-bottom-width:2px; }
+
+  .go-score{
+    font-family:"VT323",monospace;
+    font-size:42px;
+    color:var(--cream);
+    line-height:1.1;
+  }
+  .go-score span{ color:var(--amber); }
+
+  .best-banner{
+    font-family:"Pixelify Sans",monospace;
+    font-size:15px;
+    color:var(--coral);
+    letter-spacing:1px;
+  }
+
+  [hidden]{ display:none!important; }
+
+  .touch-hint{
+    font-family:"VT323",monospace;
+    font-size:15px;
+    color:#a38c6d;
+    text-align:center;
+  }
+
+  .footer-credit{
+    font-family:"VT323",monospace;
+    font-size:13px;
+    color:#5a4a38;
+    text-align:center;
+  }
+
+  @media (hover:hover){
+    .touch-hint{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="cabinet">
+    <div class="hud">
+      <div class="stat">
+        <span class="stat-label">SCORE</span>
+        <span id="scoreVal">0</span>
+      </div>
+      <button id="muteBtn" type="button" aria-label="Toggle sound">🔊</button>
+      <div class="stat right">
+        <span class="stat-label">BEST</span>
+        <span id="bestVal">0</span>
+      </div>
+    </div>
+
+    <div class="screen-frame">
+      <canvas id="game" width="432" height="432" aria-label="Diggle game screen"></canvas>
+
+      <div id="titleScreen" class="overlay">
+        <div class="title-logo">DIGGLE</div>
+        <p class="subtitle">Dig forward. Don't look back &mdash; the tunnel won't wait.</p>
+        <p class="howto">
+          <b>&uarr;&darr;&larr;&rarr;</b> or swipe to hop, one square at a time.<br>
+          Dodge the rolling critters.<br>
+          Only the stepping stones hold your weight.
+        </p>
+        <button id="startBtn" class="btn" type="button">Start Digging</button>
+      </div>
+
+      <div id="gameOverScreen" class="overlay" hidden>
+        <div class="title-logo" style="font-size:34px;">CAVE-IN!</div>
+        <p id="goReason" class="subtitle"></p>
+        <p class="go-score">Score: <span id="finalScore">0</span></p>
+        <p id="newBestBanner" class="best-banner" hidden>NEW BEST!</p>
+        <button id="retryBtn" class="btn" type="button">Dig Again</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="touch-hint">Swipe up/down/left/right on the screen to hop.</p>
+  <p class="footer-credit">Diggle &middot; a pixel tunnel-crosser</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Palette ----------
+  var PAL = {
+    soilDark:"#1b120c", soil:"#4a2f1e", soilLight:"#7a5030",
+    moss:"#6b9c4f", mossDark:"#3f6431",
+    amber:"#f4a942", amberDark:"#c97f22",
+    coral:"#e8553f", coralDark:"#a83926",
+    cream:"#f6ecd9",
+    tan:"#e7b0a6", tanDark:"#c1806f",
+    blush:"#f7b9c2",
+    ink:"#150d08"
+  };
+  PAL.coral = "#a9754a";
+  PAL.coralDark = "#6e4a2c";
+  PAL.spineTip = "#ecd3ab";
+  PAL.hedgeFace = "#d9b48f";
+  PAL.carrot = "#f2924a";
+  PAL.carrotDark = "#c96a2a";
+  PAL.leaf = "#7cae4f";
+  PAL.leafDark = "#4f7a30";
+
+  // ---------- Grid / world constants ----------
+  var COLS = 8;
+  var VISIBLE_ROWS = 9;
+  var TILE = 48;
+  var BOARD_MARGIN = 24;
+  var W = COLS * TILE + BOARD_MARGIN * 2;
+  var H = VISIBLE_ROWS * TILE;
+  var START_COL = Math.floor(COLS / 2);
+  var HOP_DURATION = 0.13; // seconds
+
+  function gridX(col) {
+    return col * TILE + BOARD_MARGIN;
+  }
+
+  // ---------- Canvas setup ----------
+  var canvas = document.getElementById("game");
+  var ctx = canvas.getContext("2d");
+  var dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+
+  // ---------- Offscreen pixel-art sprite helper ----------
+  function buildSprite(size, drawFn) {
+    var off = document.createElement("canvas");
+    off.width = size;
+    off.height = size;
+    var octx = off.getContext("2d");
+    drawFn(octx, size);
+    return off;
+  }
+
+  var SPR = 32;
+
+  var spriteDirt = [0, 1, 2].map(function (variant) {
+    return buildSprite(SPR, function (c, s) {
+      c.fillStyle = PAL.soil;
+      c.fillRect(0, 0, s, s);
+      var seed = variant * 977;
+      var speckles = 5;
+      for (var i = 0; i < speckles; i++) {
+        var rx = ((seed + i * 137) % 89) / 89;
+        var ry = ((seed + i * 271) % 97) / 97;
+        c.fillStyle = i % 2 === 0 ? PAL.soilLight : PAL.soilDark;
+        c.globalAlpha = 0.55;
+        c.fillRect(rx * s, ry * s, s * 0.06, s * 0.06);
+      }
+      c.globalAlpha = 1;
+    });
+  });
+
+  var spritePebble = buildSprite(SPR, function (c, s) {
+    c.fillStyle = PAL.soilDark;
+    c.beginPath();
+    c.ellipse(s * 0.5, s * 0.72, s * 0.13, s * 0.09, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = PAL.soilLight;
+    c.beginPath();
+    c.ellipse(s * 0.5, s * 0.68, s * 0.12, s * 0.08, 0, 0, Math.PI * 2);
+    c.fill();
+  });
+
+  var spriteMoss = buildSprite(SPR, function (c, s) {
+    var tufts = [[-0.07, 0, 0.075], [0.06, -0.02, 0.08], [0, 0.05, 0.065]];
+    c.fillStyle = PAL.moss;
+    tufts.forEach(function (t) {
+      c.beginPath();
+      c.arc(s * 0.5 + s * t[0], s * 0.66 + s * t[1], s * t[2], 0, Math.PI * 2);
+      c.fill();
+    });
+    c.fillStyle = PAL.mossDark;
+    c.beginPath();
+    c.arc(s * 0.5, s * 0.7, s * 0.03, 0, Math.PI * 2);
+    c.fill();
+  });
+
+  var spritePit = buildSprite(SPR, function (c, s) {
+    var grad = c.createRadialGradient(s * 0.5, s * 0.5, s * 0.05, s * 0.5, s * 0.5, s * 0.62);
+    grad.addColorStop(0, "#0c0704");
+    grad.addColorStop(1, PAL.soilDark);
+    c.fillStyle = grad;
+    c.fillRect(0, 0, s, s);
+    c.strokeStyle = PAL.soil;
+    c.lineWidth = s * 0.03;
+    c.globalAlpha = 0.6;
+    c.beginPath();
+    c.moveTo(s * 0.2, s * 0.15);
+    c.lineTo(s * 0.28, s * 0.4);
+    c.moveTo(s * 0.75, s * 0.1);
+    c.lineTo(s * 0.68, s * 0.35);
+    c.stroke();
+    c.globalAlpha = 1;
+  });
+
+  function drawDiggleFrame(c, s) {
+    // little stub tail peeking out behind the body
+    c.strokeStyle = PAL.tanDark;
+    c.lineWidth = s * 0.045;
+    c.lineCap = "round";
+    c.beginPath();
+    c.moveTo(s * 0.5, s * 0.86);
+    c.quadraticCurveTo(s * 0.58, s * 0.94, s * 0.53, s * 1.0);
+    c.stroke();
+
+    // hind paws with tiny toes
+    [-1, 1].forEach(function (side) {
+      c.fillStyle = PAL.tan;
+      c.beginPath();
+      c.ellipse(s * (0.5 + side * 0.24), s * 0.82, s * 0.075, s * 0.06, 0, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = PAL.tanDark;
+      c.lineWidth = s * 0.014;
+      for (var t = -1; t <= 1; t++) {
+        c.beginPath();
+        c.moveTo(s * (0.5 + side * 0.24) + t * s * 0.02, s * 0.86);
+        c.lineTo(s * (0.5 + side * 0.24) + t * s * 0.02, s * 0.9);
+        c.stroke();
+      }
+    });
+
+    // long wrinkly cylindrical body, narrower than a hamster's round body
+    c.fillStyle = PAL.tanDark;
+    c.beginPath();
+    c.ellipse(s * 0.5, s * 0.62, s * 0.245, s * 0.32, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = PAL.tan;
+    c.beginPath();
+    c.ellipse(s * 0.5, s * 0.6, s * 0.225, s * 0.3, 0, 0, Math.PI * 2);
+    c.fill();
+
+    // wrinkle folds across the bare skin
+    c.strokeStyle = PAL.tanDark;
+    c.lineWidth = s * 0.016;
+    c.globalAlpha = 0.55;
+    [0.44, 0.58, 0.72].forEach(function (ry) {
+      c.beginPath();
+      c.moveTo(s * 0.31, s * ry);
+      c.quadraticCurveTo(s * 0.5, s * (ry + 0.035), s * 0.69, s * ry);
+      c.stroke();
+    });
+    c.globalAlpha = 1;
+
+    // front paws with tiny toes
+    [-1, 1].forEach(function (side) {
+      c.fillStyle = PAL.tan;
+      c.beginPath();
+      c.ellipse(s * (0.5 + side * 0.22), s * 0.42, s * 0.06, s * 0.05, 0, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = PAL.tanDark;
+      c.lineWidth = s * 0.013;
+      for (var t2 = -1; t2 <= 1; t2++) {
+        c.beginPath();
+        c.moveTo(s * (0.5 + side * 0.22) + t2 * s * 0.017, s * 0.45);
+        c.lineTo(s * (0.5 + side * 0.22) + t2 * s * 0.017, s * 0.48);
+        c.stroke();
+      }
+    });
+
+    // elongated tapered snout (no round hamster cheeks)
+    c.fillStyle = PAL.tanDark;
+    c.beginPath();
+    c.moveTo(s * 0.34, s * 0.36);
+    c.quadraticCurveTo(s * 0.32, s * 0.2, s * 0.5, s * 0.13);
+    c.quadraticCurveTo(s * 0.68, s * 0.2, s * 0.66, s * 0.36);
+    c.quadraticCurveTo(s * 0.5, s * 0.42, s * 0.34, s * 0.36);
+    c.closePath();
+    c.fill();
+    c.fillStyle = PAL.tan;
+    c.beginPath();
+    c.moveTo(s * 0.36, s * 0.35);
+    c.quadraticCurveTo(s * 0.345, s * 0.21, s * 0.5, s * 0.155);
+    c.quadraticCurveTo(s * 0.655, s * 0.21, s * 0.64, s * 0.35);
+    c.quadraticCurveTo(s * 0.5, s * 0.4, s * 0.36, s * 0.35);
+    c.closePath();
+    c.fill();
+
+    // near-invisible ear folds (real mole rats have no outer ears)
+    c.strokeStyle = PAL.tanDark;
+    c.lineWidth = s * 0.025;
+    c.beginPath();
+    c.arc(s * 0.32, s * 0.4, s * 0.035, 0.4, Math.PI + 0.6);
+    c.stroke();
+    c.beginPath();
+    c.arc(s * 0.68, s * 0.4, s * 0.035, -0.6 - Math.PI, 0.6 - Math.PI, true);
+    c.stroke();
+
+    // whiskers, three a side, fine
+    c.strokeStyle = PAL.ink;
+    c.lineWidth = s * 0.014;
+    c.globalAlpha = 0.75;
+    [-1, 1].forEach(function (side) {
+      [0.2, 0.27, 0.34].forEach(function (fy, i) {
+        c.beginPath();
+        c.moveTo(s * (0.5 + side * 0.13), s * fy);
+        c.lineTo(s * (0.5 + side * (0.32 + i * 0.02)), s * (fy - 0.03 + i * 0.02));
+        c.stroke();
+      });
+    });
+    c.globalAlpha = 1;
+
+    // tiny beady eyes with a highlight
+    c.fillStyle = PAL.ink;
+    c.beginPath();
+    c.arc(s * 0.4, s * 0.26, s * 0.024, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.arc(s * 0.6, s * 0.26, s * 0.024, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#ffffff";
+    c.beginPath();
+    c.arc(s * 0.408, s * 0.253, s * 0.008, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.arc(s * 0.608, s * 0.253, s * 0.008, 0, Math.PI * 2);
+    c.fill();
+
+    // nose
+    c.fillStyle = PAL.blush;
+    c.beginPath();
+    c.ellipse(s * 0.5, s * 0.165, s * 0.035, s * 0.028, 0, 0, Math.PI * 2);
+    c.fill();
+
+    // signature big front teeth
+    c.fillStyle = PAL.cream;
+    c.fillRect(s * 0.455, s * 0.195, s * 0.042, s * 0.06);
+    c.fillRect(s * 0.503, s * 0.195, s * 0.042, s * 0.06);
+    c.strokeStyle = PAL.ink;
+    c.lineWidth = s * 0.01;
+    c.strokeRect(s * 0.455, s * 0.195, s * 0.042, s * 0.06);
+    c.strokeRect(s * 0.503, s * 0.195, s * 0.042, s * 0.06);
+
+    // outlines
+    c.strokeStyle = PAL.ink;
+    c.lineWidth = s * 0.03;
+    c.beginPath();
+    c.ellipse(s * 0.5, s * 0.6, s * 0.225, s * 0.3, 0, 0, Math.PI * 2);
+    c.stroke();
+    c.lineWidth = s * 0.025;
+    c.beginPath();
+    c.moveTo(s * 0.36, s * 0.35);
+    c.quadraticCurveTo(s * 0.345, s * 0.21, s * 0.5, s * 0.155);
+    c.quadraticCurveTo(s * 0.655, s * 0.21, s * 0.64, s * 0.35);
+    c.stroke();
+  }
+  var spriteDiggle = buildSprite(SPR, drawDiggleFrame);
+
+  var spriteCritter = buildSprite(SPR, function (c, s) {
+    var cx = s * 0.5, cy = s * 0.52, r = s * 0.32;
+    c.fillStyle = PAL.coralDark;
+    c.beginPath();
+    c.arc(cx, cy + s * 0.02, r + s * 0.02, 0, Math.PI * 2);
+    c.fill();
+
+    // dense radiating spines around the top of the ball
+    for (var a = -Math.PI * 0.92; a <= Math.PI * -0.02; a += Math.PI / 16) {
+      var baseX = cx + Math.cos(a) * r * 0.82;
+      var baseY = cy + Math.sin(a) * r * 0.82;
+      var tipX = cx + Math.cos(a) * r * 1.28;
+      var tipY = cy + Math.sin(a) * r * 1.28;
+      var perpX = -Math.sin(a) * s * 0.035;
+      var perpY = Math.cos(a) * s * 0.035;
+      c.fillStyle = a % (Math.PI / 8) < Math.PI / 16 ? PAL.coral : PAL.coralDark;
+      c.beginPath();
+      c.moveTo(baseX - perpX, baseY - perpY);
+      c.lineTo(tipX, tipY);
+      c.lineTo(baseX + perpX, baseY + perpY);
+      c.closePath();
+      c.fill();
+    }
+    for (var a2 = Math.PI * 0.02; a2 <= Math.PI * 0.92; a2 += Math.PI / 16) {
+      var bX = cx + Math.cos(a2) * r * 0.82;
+      var bY = cy + Math.sin(a2) * r * 0.82;
+      var tX = cx + Math.cos(a2) * r * 1.28;
+      var tY = cy + Math.sin(a2) * r * 1.28;
+      var pX = -Math.sin(a2) * s * 0.035;
+      var pY = Math.cos(a2) * s * 0.035;
+      c.fillStyle = a2 % (Math.PI / 8) < Math.PI / 16 ? PAL.coralDark : PAL.coral;
+      c.beginPath();
+      c.moveTo(bX - pX, bY - pY);
+      c.lineTo(tX, tY);
+      c.lineTo(bX + pX, bY + pY);
+      c.closePath();
+      c.fill();
+    }
+
+    // the ball body underneath the spines
+    c.fillStyle = PAL.coral;
+    c.beginPath();
+    c.arc(cx, cy, r * 0.85, Math.PI * 0.08, Math.PI * 0.92);
+    c.fill();
+
+    // tan furry face peeking out the front-bottom
+    c.fillStyle = PAL.hedgeFace;
+    c.beginPath();
+    c.ellipse(cx, cy + r * 0.62, r * 0.66, r * 0.42, 0, 0, Math.PI, false);
+    c.fill();
+
+    // snout tip
+    c.fillStyle = PAL.hedgeFace;
+    c.beginPath();
+    c.ellipse(cx, cy + r * 0.98, r * 0.22, r * 0.18, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = PAL.ink;
+    c.beginPath();
+    c.ellipse(cx, cy + r * 1.04, r * 0.09, r * 0.06, 0, 0, Math.PI * 2);
+    c.fill();
+
+    // small eyes
+    c.fillStyle = PAL.ink;
+    c.beginPath();
+    c.arc(cx - r * 0.32, cy + r * 0.58, r * 0.09, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.arc(cx + r * 0.32, cy + r * 0.58, r * 0.09, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#ffffff";
+    c.beginPath();
+    c.arc(cx - r * 0.28, cy + r * 0.53, r * 0.03, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.arc(cx + r * 0.36, cy + r * 0.53, r * 0.03, 0, Math.PI * 2);
+    c.fill();
+
+    c.strokeStyle = PAL.ink;
+    c.lineWidth = s * 0.03;
+    c.beginPath();
+    c.arc(cx, cy, r * 1.02, Math.PI * 0.02, Math.PI * 0.98);
+    c.stroke();
+  });
+
+  var spriteCritterUncurled = buildSprite(SPR, function (c, s) {
+    // side-on running pose, nose to the right; flipped at draw time for leftward travel
+    c.fillStyle = PAL.coralDark;
+    c.beginPath();
+    c.ellipse(s * 0.44, s * 0.62, s * 0.3, s * 0.13, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = PAL.coral;
+    c.beginPath();
+    c.ellipse(s * 0.44, s * 0.56, s * 0.29, s * 0.14, 0, 0, Math.PI * 2);
+    c.fill();
+    // dense spiky ridge along the whole back
+    for (var i = 0; i < 9; i++) {
+      var bx = s * (0.14 + i * 0.052);
+      var spineLen = s * (0.12 + (i % 2) * 0.025);
+      c.fillStyle = i % 2 === 0 ? PAL.coralDark : PAL.coral;
+      c.beginPath();
+      c.moveTo(bx, s * 0.46);
+      c.lineTo(bx + s * 0.036, s * 0.46);
+      c.lineTo(bx + s * 0.018, s * 0.46 - spineLen);
+      c.closePath();
+      c.fill();
+    }
+    // tan furry face and snout
+    c.fillStyle = PAL.hedgeFace;
+    c.beginPath();
+    c.ellipse(s * 0.68, s * 0.56, s * 0.15, s * 0.12, -0.15, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.moveTo(s * 0.72, s * 0.52);
+    c.quadraticCurveTo(s * 0.88, s * 0.53, s * 0.87, s * 0.6);
+    c.quadraticCurveTo(s * 0.8, s * 0.65, s * 0.7, s * 0.62);
+    c.closePath();
+    c.fill();
+    c.fillStyle = PAL.ink;
+    c.beginPath();
+    c.ellipse(s * 0.84, s * 0.575, s * 0.025, s * 0.02, 0, 0, Math.PI * 2);
+    c.fill();
+    // small eye
+    c.fillStyle = PAL.ink;
+    c.beginPath();
+    c.arc(s * 0.65, s * 0.51, s * 0.032, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#ffffff";
+    c.beginPath();
+    c.arc(s * 0.66, s * 0.5, s * 0.011, 0, Math.PI * 2);
+    c.fill();
+    // legs (running stagger)
+    c.fillStyle = PAL.coralDark;
+    c.fillRect(s * 0.28, s * 0.68, s * 0.05, s * 0.12);
+    c.fillRect(s * 0.42, s * 0.71, s * 0.05, s * 0.09);
+    c.fillRect(s * 0.56, s * 0.68, s * 0.05, s * 0.12);
+    c.fillRect(s * 0.68, s * 0.71, s * 0.05, s * 0.09);
+    // little tail
+    c.beginPath();
+    c.moveTo(s * 0.16, s * 0.58);
+    c.lineTo(s * 0.06, s * 0.52);
+    c.lineTo(s * 0.14, s * 0.63);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = PAL.ink;
+    c.lineWidth = s * 0.03;
+    c.beginPath();
+    c.ellipse(s * 0.44, s * 0.56, s * 0.29, s * 0.14, 0, 0, Math.PI * 2);
+    c.stroke();
+  });
+
+  function drawSprite(img, x, y, size, opts) {
+    opts = opts || {};
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    if (opts.alpha !== undefined) ctx.globalAlpha = opts.alpha;
+    var flip = opts.flipX ? -1 : 1;
+    if (opts.angle || flip === -1) {
+      ctx.translate(x + size / 2, y + size / 2);
+      if (opts.angle) ctx.rotate(opts.angle);
+      ctx.scale(flip, 1);
+      ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    } else {
+      ctx.drawImage(img, x, y, size, size);
+    }
+    ctx.restore();
+  }
+
+  // ---------- Audio engine ----------
+  var Audio_ = (function () {
+    var actx = null;
+    var muted = false;
+    try {
+      muted = localStorage.getItem("diggleMuted") === "1";
+    } catch (e) {}
+    var musicTimer = null;
+    var musicGain = null;
+
+    function ensureCtx() {
+      if (!actx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        actx = new AC();
+        musicGain = actx.createGain();
+        musicGain.gain.value = 0.18;
+        musicGain.connect(actx.destination);
+      }
+      if (actx.state === "suspended") actx.resume();
+      return actx;
+    }
+
+    function tone(freq, time, duration, type, peak, dest) {
+      var ac = ensureCtx();
+      var osc = ac.createOscillator();
+      var gain = ac.createGain();
+      osc.type = type || "square";
+      osc.frequency.setValueAtTime(freq, time);
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.exponentialRampToValueAtTime(peak || 0.22, time + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+      osc.connect(gain);
+      gain.connect(dest || ac.destination);
+      osc.start(time);
+      osc.stop(time + duration + 0.02);
+    }
+
+    function sweep(fromFreq, toFreq, time, duration, type) {
+      var ac = ensureCtx();
+      var osc = ac.createOscillator();
+      var gain = ac.createGain();
+      osc.type = type || "triangle";
+      osc.frequency.setValueAtTime(fromFreq, time);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20, toFreq), time + duration);
+      gain.gain.setValueAtTime(0.22, time);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.start(time);
+      osc.stop(time + duration + 0.02);
+    }
+
+    function noiseBurst(time, duration) {
+      var ac = ensureCtx();
+      var bufferSize = Math.floor(ac.sampleRate * duration);
+      var buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
+      var data = buffer.getChannelData(0);
+      for (var i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      }
+      var src = ac.createBufferSource();
+      src.buffer = buffer;
+      var gain = ac.createGain();
+      gain.gain.setValueAtTime(0.28, time);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+      src.connect(gain);
+      gain.connect(ac.destination);
+      src.start(time);
+    }
+
+    function playHop() {
+      if (muted) return;
+      var ac = ensureCtx();
+      tone(520, ac.currentTime, 0.09, "square", 0.16);
+    }
+    function playCrash() {
+      if (muted) return;
+      var ac = ensureCtx();
+      noiseBurst(ac.currentTime, 0.22);
+      tone(90, ac.currentTime, 0.25, "sawtooth", 0.25);
+    }
+    function playFall() {
+      if (muted) return;
+      var ac = ensureCtx();
+      sweep(480, 60, ac.currentTime, 0.42, "sawtooth");
+    }
+    function playSelect() {
+      if (muted) return;
+      var ac = ensureCtx();
+      tone(700, ac.currentTime, 0.06, "square", 0.14);
+    }
+    function playFanfare() {
+      if (muted) return;
+      var ac = ensureCtx();
+      var t = ac.currentTime;
+      [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) {
+        tone(f, t + i * 0.09, 0.16, "square", 0.2);
+      });
+    }
+
+    var BASS = ["C3", null, "G2", null, "A2", null, "G2", null];
+    var LEAD = [null, "E4", null, "G4", "A4", null, "G4", "E4"];
+    var FREQ = { C2: 65.41, G2: 98.0, A2: 110.0, C3: 130.81, E4: 329.63, G4: 392.0, A4: 440.0 };
+    var BPM = 138;
+    var STEP = 60 / BPM / 2;
+    var LOOP_LEN = STEP * BASS.length;
+
+    function scheduleLoop(startTime) {
+      var ac = ensureCtx();
+      for (var i = 0; i < BASS.length; i++) {
+        var t = startTime + i * STEP;
+        if (BASS[i]) tone(FREQ[BASS[i]], t, STEP * 0.9, "square", 0.12, musicGain);
+        if (LEAD[i]) tone(FREQ[LEAD[i]], t, STEP * 0.7, "triangle", 0.1, musicGain);
+      }
+    }
+
+    function startMusic() {
+      if (muted) return;
+      var ac = ensureCtx();
+      var next = ac.currentTime + 0.05;
+      function loopTick() {
+        scheduleLoop(next);
+        next += LOOP_LEN;
+        musicTimer = setTimeout(loopTick, LOOP_LEN * 1000 - 60);
+      }
+      loopTick();
+    }
+
+    function stopMusic() {
+      if (musicTimer) clearTimeout(musicTimer);
+      musicTimer = null;
+    }
+
+    function setMuted(v) {
+      muted = v;
+      try {
+        localStorage.setItem("diggleMuted", v ? "1" : "0");
+      } catch (e) {}
+      if (v) stopMusic();
+    }
+
+    return {
+      playHop: playHop,
+      playCrash: playCrash,
+      playFall: playFall,
+      playSelect: playSelect,
+      playFanfare: playFanfare,
+      startMusic: startMusic,
+      stopMusic: stopMusic,
+      setMuted: setMuted,
+      isMuted: function () { return muted; },
+      unlock: ensureCtx
+    };
+  })();
+
+  // ---------- Persistence ----------
+  function loadHighScore() {
+    try {
+      return parseInt(localStorage.getItem("diggleHighScore") || "0", 10) || 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+  function saveHighScore(v) {
+    try {
+      localStorage.setItem("diggleHighScore", String(v));
+    } catch (e) {}
+  }
+
+  // ---------- Lane generation ----------
+  var lanes = new Map();
+  var lastLaneTypes = [];
+
+  function difficultyT(row) {
+    return Math.min(1, Math.max(0, row - 1) / 28);
+  }
+
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  function pickLaneType(row) {
+    if (row === 0) return "safe";
+    var t = difficultyT(row);
+    var weights = {
+      safe: lerp(0.22, 0.08, t),
+      roller: lerp(0.42, 0.58, t),
+      stones: lerp(0.36, 0.34, t)
+    };
+    var recentHazards = lastLaneTypes.slice(-3).every(function (x) { return x !== "safe"; });
+    if (recentHazards) return "safe";
+    var total = weights.safe + weights.roller + weights.stones;
+    var r = Math.random() * total;
+    if (r < weights.safe) return "safe";
+    r -= weights.safe;
+    if (r < weights.roller) return "roller";
+    return "stones";
+  }
+
+  function makeSafeLane(row) {
+    var decor = [];
+    for (var i = 0; i < COLS; i++) {
+      var roll = Math.random();
+      decor.push(roll < 0.16 ? "pebble" : roll < 0.28 ? "moss" : null);
+    }
+    return {
+      row: row,
+      type: "safe",
+      dirtVariant: Math.floor(Math.random() * spriteDirt.length),
+      decor: decor
+    };
+  }
+
+  function makeRollerLane(row) {
+    var t = difficultyT(row);
+    var count = t > 0.2 && Math.random() < 0.55 ? 2 : 1;
+    var dir = row % 2 === 0 ? 1 : -1;
+    var critters = [];
+    for (var i = 0; i < count; i++) {
+      var isFast = true;
+      var speed = lerp(1.6, 3.3, t) * (1.6 + Math.random() * 0.5);
+      critters.push({
+        phase: Math.random() * (COLS + 2) - 1,
+        dir: dir,
+        speed: speed,
+        fast: isFast
+      });
+    }
+    return {
+      row: row,
+      type: "roller",
+      dirtVariant: Math.floor(Math.random() * spriteDirt.length),
+      critters: critters
+    };
+  }
+
+  function fmod(a, n) {
+    return ((a % n) + n) % n;
+  }
+
+  function drawLongCarrot(c, x0, y0, w, h) {
+    var pad = h * 0.14;
+    var midY = y0 + h * 0.5;
+    var leafX = x0 + pad;
+    var tipX = x0 + w - pad;
+    var halfW = h * 0.22;
+
+    function outline(scaleY) {
+      c.beginPath();
+      c.moveTo(leafX, midY - halfW * 0.85 * scaleY);
+      c.quadraticCurveTo(x0 + w * 0.55, midY - halfW * 1.05 * scaleY, tipX, midY);
+      c.quadraticCurveTo(x0 + w * 0.55, midY + halfW * 1.05 * scaleY, leafX, midY + halfW * 0.85 * scaleY);
+      c.closePath();
+    }
+
+    c.fillStyle = PAL.carrotDark;
+    outline(1);
+    c.fill();
+    c.fillStyle = PAL.carrot;
+    outline(0.8);
+    c.fill();
+
+    c.strokeStyle = PAL.carrotDark;
+    c.lineWidth = Math.max(1, h * 0.018);
+    var ridgeCount = Math.max(2, Math.round((tipX - leafX) / (h * 0.38)));
+    for (var i = 0; i < ridgeCount; i++) {
+      var rx = leafX + (tipX - leafX) * ((i + 0.5) / ridgeCount);
+      c.beginPath();
+      c.moveTo(rx, midY - halfW * 0.5);
+      c.lineTo(rx + h * 0.03, midY + halfW * 0.5);
+      c.stroke();
+    }
+
+    c.strokeStyle = PAL.ink;
+    c.lineWidth = h * 0.03;
+    outline(1);
+    c.stroke();
+
+    c.fillStyle = PAL.leaf;
+    [[-0.3, -1], [0, -1.2], [0.3, -1]].forEach(function (o) {
+      c.beginPath();
+      c.moveTo(leafX, midY);
+      c.quadraticCurveTo(leafX + o[0] * h * 0.18, midY + o[1] * h * 0.18, leafX + o[0] * h * 0.3, midY + o[1] * h * 0.5);
+      c.quadraticCurveTo(leafX + o[0] * h * 0.08, midY + o[1] * h * 0.15, leafX, midY);
+      c.closePath();
+      c.fill();
+    });
+    c.strokeStyle = PAL.leafDark;
+    c.lineWidth = h * 0.015;
+    c.beginPath();
+    c.moveTo(leafX, midY);
+    c.lineTo(leafX, midY - h * 0.32);
+    c.stroke();
+  }
+
+  function buildStonePatternStrip(stoneWidth, period) {
+    var strip = document.createElement("canvas");
+    strip.width = period * TILE;
+    strip.height = TILE;
+    var sctx = strip.getContext("2d");
+    sctx.imageSmoothingEnabled = false;
+    for (var i = 0; i < period; i++) {
+      sctx.drawImage(spritePit, 0, 0, SPR, SPR, i * TILE, 0, TILE, TILE);
+    }
+    drawLongCarrot(sctx, 0, 0, stoneWidth * TILE, TILE);
+    return strip;
+  }
+
+  function laneStoneAt(lane, col) {
+    var idx = Math.floor(fmod(col + lane.offset, lane.period));
+    return idx < lane.stoneWidth;
+  }
+
+  function makeStonesLane(row) {
+    var t = difficultyT(row);
+    // stoneWidth stays >= 2: a single-tile moving target is too thin a window to
+    // reliably land on even with precise timing, so every carrot is at least
+    // two tiles wide (drawn as one long carrot rather than a "mini" one).
+    var stoneWidth = Math.random() < 0.5 ? 2 : 3;
+    var gapWidth = Math.round(lerp(2, 4, t)) + (Math.random() < 0.3 ? 1 : 0);
+    var period = stoneWidth + gapWidth;
+    var dir = row % 2 === 0 ? 1 : -1;
+    var speed = lerp(0.5, 1.3, t) * (0.85 + Math.random() * 0.3);
+    return {
+      row: row,
+      type: "stones",
+      stoneWidth: stoneWidth,
+      period: period,
+      dir: dir,
+      speed: speed,
+      offset: Math.random() * period,
+      strip: buildStonePatternStrip(stoneWidth, period)
+    };
+  }
+
+  function ensureLane(row) {
+    if (lanes.has(row)) return lanes.get(row);
+    var type = pickLaneType(row);
+    var lane;
+    if (type === "safe") lane = makeSafeLane(row);
+    else if (type === "roller") lane = makeRollerLane(row);
+    else lane = makeStonesLane(row);
+    lanes.set(row, lane);
+    lastLaneTypes.push(type);
+    if (lastLaneTypes.length > 4) lastLaneTypes.shift();
+    return lane;
+  }
+
+  function pruneLanes(beforeRow) {
+    lanes.forEach(function (_, row) {
+      if (row < beforeRow) lanes.delete(row);
+    });
+  }
+
+  // ---------- Game state ----------
+  var STATE = { TITLE: "title", PLAYING: "playing", GAMEOVER: "gameover" };
+  var state = STATE.TITLE;
+
+  var player, cameraOffset, cameraSpeed, score, best;
+
+  function resetGame() {
+    lanes.clear();
+    lastLaneTypes = [];
+    player = {
+      worldRow: 0,
+      worldCol: START_COL,
+      visualRow: 0,
+      visualCol: START_COL,
+      isHopping: false,
+      hopFrom: null,
+      hopTo: null,
+      hopStart: 0,
+      facing: 0,
+      rideDrift: 0
+    };
+    cameraOffset = 0;
+    cameraSpeed = 0.85;
+    score = 0;
+    best = loadHighScore();
+    ensureLane(0);
+    updateHud();
+  }
+
+  function updateHud() {
+    document.getElementById("scoreVal").textContent = String(score);
+    document.getElementById("bestVal").textContent = String(Math.max(best, score));
+  }
+
+  var ANCHOR_ROWS = VISIBLE_ROWS / 2;
+
+  function canvasY(row) {
+    return H / 2 - TILE / 2 - (row - cameraOffset) * TILE;
+  }
+
+  function tryMove(dCol, dRow) {
+    if (state !== STATE.PLAYING || player.isHopping) return;
+    var newCol = player.worldCol + dCol;
+    var newRow = player.worldRow + dRow;
+    if (newCol < 0 || newCol >= COLS) return;
+    if (newRow < 0) return;
+    ensureLane(newRow);
+    player.isHopping = true;
+    player.rideDrift = 0;
+    player.hopFrom = { row: player.worldRow, col: player.worldCol };
+    player.hopTo = { row: newRow, col: newCol };
+    player.hopStart = performance.now();
+    player.worldRow = newRow;
+    player.worldCol = newCol;
+    if (dCol !== 0) player.facing = dCol;
+    Audio_.playHop();
+  }
+
+  function landPlayer() {
+    player.isHopping = false;
+    player.visualRow = player.worldRow;
+    player.visualCol = player.worldCol;
+    player.rideDrift = 0;
+    score += 1;
+    updateHud();
+    checkStandingHazard();
+  }
+
+  function checkStandingHazard() {
+    var lane = lanes.get(player.worldRow);
+    if (!lane) return;
+    if (lane.type === "stones") {
+      if (!laneStoneAt(lane, player.worldCol)) triggerGameOver("fall");
+    } else if (lane.type === "roller") {
+      for (var i = 0; i < lane.critters.length; i++) {
+        var c = lane.critters[i];
+        if (Math.abs(wrapPhase(c.phase) - player.worldCol) < 0.5) {
+          triggerGameOver("crash");
+          return;
+        }
+      }
+    }
+  }
+
+  function wrapPhase(phase) {
+    var range = COLS + 2;
+    var p = ((phase + 1) % range + range) % range - 1;
+    return p;
+  }
+
+  var UNROLL_RANGE = 1.4;
+  function critterUnrollT(col, dir) {
+    var distToExit = dir > 0 ? COLS - col : col - (-1);
+    return 1 - Math.min(1, Math.max(0, distToExit / UNROLL_RANGE));
+  }
+
+  function triggerGameOver(reason) {
+    if (state === STATE.GAMEOVER) return;
+    state = STATE.GAMEOVER;
+    Audio_.stopMusic();
+    if (reason === "fall") Audio_.playFall();
+    else if (reason === "collapse") Audio_.playFall();
+    else Audio_.playCrash();
+    var isNewBest = score > best;
+    if (isNewBest) {
+      best = score;
+      saveHighScore(best);
+    }
+    document.getElementById("finalScore").textContent = String(score);
+    var reasonText =
+      reason === "fall" ? "Diggle slipped between the stones!" :
+      reason === "collapse" ? "The tunnel caved in behind Diggle!" :
+      "A rolling critter got in the way!";
+    document.getElementById("goReason").textContent = reasonText;
+    document.getElementById("newBestBanner").hidden = !isNewBest;
+    if (isNewBest) setTimeout(function () { Audio_.playFanfare(); }, 260);
+    document.getElementById("gameOverScreen").hidden = false;
+    updateHud();
+  }
+
+  // ---------- Update ----------
+  var lastTime = null;
+
+  function update(dt) {
+    if (state !== STATE.PLAYING) return;
+
+    var t = difficultyT(player.worldRow);
+    cameraSpeed = Math.min(2.1, 0.85 + Math.floor(player.worldRow / 8) * 0.09);
+    cameraOffset += cameraSpeed * dt;
+
+    var minRow = Math.floor(cameraOffset - ANCHOR_ROWS) - 1;
+    var maxRow = Math.floor(cameraOffset + ANCHOR_ROWS) + 1;
+    for (var r = Math.max(0, minRow); r <= maxRow; r++) ensureLane(r);
+    pruneLanes(Math.max(0, minRow - 2));
+
+    lanes.forEach(function (lane) {
+      if (lane.type === "roller") {
+        lane.critters.forEach(function (c) {
+          c.phase += c.dir * c.speed * dt;
+        });
+      } else if (lane.type === "stones") {
+        lane.offset = fmod(lane.offset + lane.dir * lane.speed * dt, lane.period);
+      }
+    });
+
+    if (player.isHopping) {
+      var elapsed = (performance.now() - player.hopStart) / 1000;
+      var f = Math.min(1, elapsed / HOP_DURATION);
+      player.visualRow = lerp(player.hopFrom.row, player.hopTo.row, f);
+      player.visualCol = lerp(player.hopFrom.col, player.hopTo.col, f);
+      if (f >= 1) landPlayer();
+    } else {
+      var standingLane = lanes.get(player.worldRow);
+      if (standingLane && standingLane.type === "stones") {
+        // Ride the moving stone along with it, like a log in classic Frogger.
+        // player.worldCol (integer) only agrees with the stone pattern's continuous
+        // offset at the instant of a tile change; mid-slide they briefly disagree by
+        // up to a full tile, which a wide, multi-tile stone absorbs but a single-tile
+        // one does not. So once landing has confirmed we're on a stone, keep riding
+        // and only ever re-validate at the moments the tile itself actually changes.
+        player.rideDrift -= standingLane.dir * standingLane.speed * dt;
+        while (state === STATE.PLAYING && (player.rideDrift <= -1 || player.rideDrift >= 1)) {
+          var shift = player.rideDrift > 0 ? 1 : -1;
+          var carriedCol = player.worldCol + shift;
+          if (carriedCol < 0 || carriedCol >= COLS || !laneStoneAt(standingLane, carriedCol)) {
+            triggerGameOver("fall");
+            break;
+          }
+          player.worldCol = carriedCol;
+          player.rideDrift -= shift;
+        }
+        if (state === STATE.PLAYING) player.visualCol = player.worldCol + player.rideDrift;
+      } else {
+        player.rideDrift = 0;
+        checkStandingHazard();
+      }
+    }
+
+    if (canvasY(player.visualRow) > H - TILE * 0.35) {
+      triggerGameOver("collapse");
+    }
+  }
+
+  // ---------- Render ----------
+  function drawBackground() {
+    ctx.fillStyle = PAL.soilDark;
+    ctx.fillRect(0, 0, W, H);
+    drawWallStrip(0, BOARD_MARGIN);
+    drawWallStrip(W - BOARD_MARGIN, BOARD_MARGIN);
+  }
+
+  var wallMarks = [0, 1].map(function () {
+    var marks = [];
+    for (var i = 0; i < 26; i++) {
+      var seed = (i * 197 + 53) % 97;
+      marks.push({
+        y: (seed / 97) * H,
+        x: (seed * 31 % 100) / 100,
+        c: seed % 3
+      });
+    }
+    return marks;
+  });
+
+  function drawWallStrip(x0, width) {
+    ctx.fillStyle = PAL.soilDark;
+    ctx.fillRect(x0, 0, width, H);
+    var marks = wallMarks[x0 === 0 ? 0 : 1];
+    marks.forEach(function (m) {
+      ctx.fillStyle = m.c === 0 ? PAL.mossDark : m.c === 1 ? PAL.soilLight : PAL.soil;
+      ctx.globalAlpha = 0.55;
+      ctx.fillRect(x0 + m.x * width, m.y, 3, 3);
+    });
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = PAL.soil;
+    ctx.fillRect(x0 === 0 ? x0 + width - 2 : x0, 0, 2, H);
+  }
+
+  function drawLane(lane) {
+    var y = canvasY(lane.row);
+    if (y > H + TILE || y < -TILE * 2) return;
+    var gridW = COLS * TILE;
+
+    if (lane.type === "stones") {
+      var stripW = lane.period * TILE;
+      var shiftPx = fmod(lane.offset * TILE, stripW);
+      var startX = gridX(0) - shiftPx;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(gridX(0), y, gridW, TILE);
+      ctx.clip();
+      ctx.imageSmoothingEnabled = false;
+      for (var sx = startX; sx < gridX(0) + gridW; sx += stripW) {
+        ctx.drawImage(lane.strip, sx, y);
+      }
+      ctx.restore();
+    } else {
+      for (var i = 0; i < COLS; i++) {
+        var dirtImg = spriteDirt[lane.dirtVariant];
+        ctx.drawImage(dirtImg, 0, 0, SPR, SPR, gridX(i), y, TILE, TILE);
+      }
+      if (lane.type === "safe" && lane.decor) {
+        for (var d = 0; d < COLS; d++) {
+          if (lane.decor[d] === "pebble") drawSprite(spritePebble, gridX(d), y, TILE);
+          else if (lane.decor[d] === "moss") drawSprite(spriteMoss, gridX(d), y, TILE);
+        }
+      }
+      if (lane.type === "roller") {
+        lane.critters.forEach(function (c) {
+          var col = wrapPhase(c.phase);
+          var x = gridX(col);
+          var unrollT = critterUnrollT(col, c.dir);
+          var rollSpeedMul = c.fast ? 1.6 : 1;
+          if (unrollT < 1) {
+            var wobble = Math.sin(performance.now() / (90 / rollSpeedMul) + c.phase) * 0.15 * (1 - unrollT);
+            drawSprite(spriteCritter, x, y, TILE, { angle: wobble, alpha: 1 - unrollT });
+          }
+          if (unrollT > 0) {
+            var bob = Math.sin(performance.now() / 70) * TILE * 0.03 * unrollT;
+            drawSprite(spriteCritterUncurled, x, y + bob, TILE, { flipX: c.dir < 0, alpha: unrollT });
+          }
+        });
+      }
+    }
+
+    ctx.fillStyle = PAL.soilDark;
+    ctx.globalAlpha = 0.35;
+    ctx.fillRect(gridX(0), y + TILE - 2, gridW, 2);
+    ctx.globalAlpha = 1;
+  }
+
+  function drawPlayer() {
+    var x = gridX(player.visualCol);
+    var y = canvasY(player.visualRow);
+    var hopArc = 0;
+    var squashX = 1, squashY = 1;
+    if (player.isHopping) {
+      var elapsed = (performance.now() - player.hopStart) / 1000;
+      var f = Math.min(1, elapsed / HOP_DURATION);
+      hopArc = Math.sin(f * Math.PI) * TILE * 0.32;
+      squashX = 1 - Math.sin(f * Math.PI) * 0.08;
+      squashY = 1 + Math.sin(f * Math.PI) * 0.1;
+    }
+    ctx.save();
+    ctx.translate(x + TILE / 2, y + TILE / 2 - hopArc);
+    ctx.scale(squashX * (player.facing < 0 ? -1 : 1), squashY);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(spriteDiggle, -TILE / 2, -TILE / 2, TILE, TILE);
+    ctx.restore();
+  }
+
+  function render() {
+    drawBackground();
+    var minRow = Math.max(0, Math.floor(cameraOffset - ANCHOR_ROWS) - 1);
+    var maxRow = Math.floor(cameraOffset + ANCHOR_ROWS) + 1;
+    for (var r = minRow; r <= maxRow; r++) {
+      var lane = lanes.get(r);
+      if (lane) drawLane(lane);
+    }
+    if (state !== STATE.TITLE) drawPlayer();
+  }
+
+  // ---------- Main loop ----------
+  function tick(now) {
+    if (lastTime === null) lastTime = now;
+    var dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+    update(dt);
+    render();
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // ---------- Input ----------
+  var KEY_MAP = {
+    ArrowUp: [0, 1], KeyW: [0, 1],
+    ArrowDown: [0, -1], KeyS: [0, -1],
+    ArrowLeft: [-1, 0], KeyA: [-1, 0],
+    ArrowRight: [1, 0], KeyD: [1, 0]
+  };
+
+  window.addEventListener("keydown", function (e) {
+    if (state === STATE.PLAYING && KEY_MAP[e.code]) {
+      e.preventDefault();
+      var m = KEY_MAP[e.code];
+      tryMove(m[0], m[1]);
+    } else if (e.code === "Enter" || e.code === "Space") {
+      if (state === STATE.TITLE) startGame();
+      else if (state === STATE.GAMEOVER) startGame();
+    }
+  }, { passive: false });
+
+  var touchStart = null;
+  var frame = document.querySelector(".screen-frame");
+  frame.addEventListener("touchstart", function (e) {
+    var t = e.changedTouches[0];
+    touchStart = { x: t.clientX, y: t.clientY };
+  }, { passive: true });
+  frame.addEventListener("touchend", function (e) {
+    if (!touchStart || state !== STATE.PLAYING) return;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - touchStart.x;
+    var dy = t.clientY - touchStart.y;
+    var absX = Math.abs(dx), absY = Math.abs(dy);
+    var threshold = 22;
+    if (Math.max(absX, absY) < threshold) { touchStart = null; return; }
+    if (absX > absY) tryMove(dx > 0 ? 1 : -1, 0);
+    else tryMove(0, dy > 0 ? -1 : 1);
+    touchStart = null;
+  }, { passive: true });
+
+  // ---------- Screen flow ----------
+  var titleScreen = document.getElementById("titleScreen");
+  var gameOverScreen = document.getElementById("gameOverScreen");
+
+  function startGame() {
+    Audio_.unlock();
+    resetGame();
+    state = STATE.PLAYING;
+    titleScreen.hidden = true;
+    gameOverScreen.hidden = true;
+    Audio_.startMusic();
+  }
+
+  document.getElementById("startBtn").addEventListener("click", function () {
+    Audio_.playSelect();
+    startGame();
+  });
+  document.getElementById("retryBtn").addEventListener("click", function () {
+    Audio_.playSelect();
+    startGame();
+  });
+
+  var muteBtn = document.getElementById("muteBtn");
+  function refreshMuteBtn() {
+    muteBtn.textContent = Audio_.isMuted() ? "🔇" : "🔊";
+  }
+  muteBtn.addEventListener("click", function () {
+    Audio_.unlock();
+    Audio_.setMuted(!Audio_.isMuted());
+    refreshMuteBtn();
+    if (!Audio_.isMuted() && state === STATE.PLAYING) Audio_.startMusic();
+  });
+  refreshMuteBtn();
+
+  // ---------- Idle preview state (before first game) ----------
+  best = loadHighScore();
+  score = 0;
+  player = { worldRow: 0, worldCol: START_COL, visualRow: 0, visualCol: START_COL, isHopping: false, facing: 0 };
+  cameraOffset = 0;
+  ensureLane(0);
+  ensureLane(1);
+  ensureLane(2);
+  updateHud();
+})();
+</script>
+</body>
+</html>
